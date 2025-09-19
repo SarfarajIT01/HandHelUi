@@ -84,13 +84,10 @@
                              @onclick="@(() => { if (item.SubItems?.Count > 0 || item.CommonAddons?.Count > 0) OpenSubItemPopup(item); })">
                            <div class="card-body">
                                <h6 class="card-title">@item.ItemName</h6>
-
-                               <!-- Show "Customized" badge only if has subitems -->
-                                @if (item.SubItems?.Count > 0)
+                                @if (item.SubItems?.Count > 0 || item.CommonAddons?.Count > 0)
                                {
                                    <h6 class="text-denger">Customized</h6>
                                }
-
                                @if (!string.IsNullOrEmpty(SearchTerm))
                                {
                                    <small class="text-muted d-block">Category: @item.MenuCategoryName</small>
@@ -98,7 +95,6 @@
                                    <small class="text-muted">OutletId: @item.OutletId </small>
                                    <small class="text-muted">PosCode: @item.PosCode </small>
                                }
-
                                 <div class="d-flex justify-content-between align-items-center @(item.SubItems?.Count > 0 || item.CommonAddons?.Count > 0 ? "mt-0" : "mt-3")">
                                    <span class="food-price">₹ @item.Rates</span>
                                    <div class="d-flex align-items-center">
@@ -171,8 +167,8 @@
     [Parameter]
     [SupplyParameterFromQuery]
     public string? search { get; set; }
-    private List<MenuItem> AllMenuItems = new(); // All items from API
-    private List<MenuItem> CurrentMenuItems = new(); // Items for current group/posCode
+    private List<MenuItem> AllMenuItems = new(); 
+    private List<MenuItem> CurrentMenuItems = new(); 
     protected List<string?> UniqueGroupNames { get; set; } = new();
     protected List<string?> MenuCategoryName { get; set; } = new();
     private string ActiveGroup { get; set; } = "FOOD";
@@ -180,7 +176,6 @@
     private string SearchTerm { get; set; } = "";
     private bool ShowTablePopup = false;
     private PfbRmscMst? SelectedTable { get; set; }
-    // Cart properties moved to CartState
     private float Total => CartState.CartItems.Sum(x => x.Price * x.Qty);
 
     protected override async Task OnInitializedAsync()
@@ -355,7 +350,7 @@
 
     private async void HandleToggleCart()
     {
-        if (!CartState.IsCartOpen) // trying to open
+        if (!CartState.IsCartOpen)
         {
             if (SelectedTable == null && posCode == "001")
             {
@@ -384,9 +379,29 @@
         ShowAddedToCartNotification(menuItem.ItemName);
     }
 
+    private string GenerateOrderNumber()
+    {
+        return $"ORD{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
+    }
+
     private void DecreaseItemQty(MenuItem menuItem)
     {
         CartState.DecreaseItemQty(menuItem.ItemName);
+    }
+
+    private void IncreaseQty(CartItem item)
+    {
+        CartState.IncreaseQty(item);
+    }
+
+    private void DecreaseQty(CartItem item)
+    {
+        CartState.DecreaseQty(item);
+    }
+
+    private void ShowAddedToCartNotification(string itemName)
+    {
+        Console.WriteLine($"Added {itemName} to cart");
     }
 
     private async Task PlaceOrder()
@@ -464,33 +479,6 @@
             await JS.InvokeVoidAsync("alert", "An error occurred while placing the order.");
         }
     }
-
-    private string GenerateOrderNumber()
-    {
-        return $"ORD{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
-    }
-
-    // private void DecreaseItemQty(MenuItem menuItem)
-    // {
-    //     CartState.DecreaseItemQty(menuItem.ItemName);
-    // }
-
-    private void IncreaseQty(CartItem item)
-    {
-        CartState.IncreaseQty(item);
-    }
-
-    private void DecreaseQty(CartItem item)
-    {
-        CartState.DecreaseQty(item);
-    }
-
-    private void ShowAddedToCartNotification(string itemName)
-    {
-        Console.WriteLine($"Added {itemName} to cart");
-    }
-
-    
 
     public void Dispose()
     {

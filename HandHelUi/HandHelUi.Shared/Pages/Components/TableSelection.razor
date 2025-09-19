@@ -11,7 +11,8 @@
         <div class="table-modal-content">
             <div class="table-modal-header">
                 <h5 class="fw-bold">Select Dining Table</h5>
-                <button class="close-btn" @onclick="ClosePopup">×</button>
+                @* <button class="close-btn" @onclick="ClosePopup">×</button> *@
+                <button class="btn-close" style="margin-top: -16px; margin-right: 4px;" @onclick="ClosePopup"></button>
             </div>
 
             <div class="table-grid">
@@ -113,10 +114,11 @@
 
     .table-modal-content {
         background: #fff;
-        border-radius: 18px;
+        border-radius: 15px;
         width: 90%;
         max-width: 600px;
-        padding: 20px;
+        /* padding: 12px; */
+        padding: 12px 5px 12px 12px;
         animation: fadeIn 0.3s ease-in-out;
     }
 
@@ -137,10 +139,11 @@
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 15px;
-        margin-bottom: 20px;
+        /* margin-bottom: 20px; */
         max-height: 400px; /* scroll limit */
         overflow-y: auto;
-        padding: 5px;
+        /* padding: 5px; */
+        padding: 5px 8px 5px 5px;
     }
 
         .table-grid::-webkit-scrollbar {

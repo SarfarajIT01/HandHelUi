@@ -157,15 +157,16 @@ body {
 
 .logo-small {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    height: 43px;
+/*    flex-direction: column;
+    align-items: center;*/
 }
 
-    .logo-small img {
-        height: 26px;
+/*    .logo-small img {
+            height: 39px;
         width: auto;
-        margin-bottom: 0.25rem;
-    }
+        margin-bottom: 0.25rem !important;
+    }*/
 
 .searchidss {
     border: none;
