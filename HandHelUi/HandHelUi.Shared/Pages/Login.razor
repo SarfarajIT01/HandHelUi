@@ -1,0 +1,282 @@
+﻿@page "/"
+@using System.Text.Json
+@using HandHelUi.Shared.Services
+@using HandHeldUi.Shared.Services
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject IJSRuntime JSRuntime
+@inject ILoginService LoginService
+@inject HttpClient Http
+@inject UserState UserState
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<div class="d-flex align-items-center justify-content-center vh-100 bg-light">
+    <div class="card shadow-lg border-0 rounded-4 p-4" style="max-width: 400px; width: 100%;">
+        <!-- Logo + Header -->
+        <div class="text-center mb-4">
+            <img src="_content/HandHelUi.Shared/assets/img/csat_logo.png" class="mb-3" style="width: 80px;" alt="Logo" />
+            <h4 class="fw-bold">Handheld App</h4>
+            @* <p class="text-muted small">Place orders with ease</p> *@
+        </div>
+
+        <!-- Loader -->
+        <div class="text-center mb-3" style="@(_isLoading ? "" : "display:none;")">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Please wait...</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="card-body p-0">
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="Client" placeholder="Client ID" @bind="_clientId">
+                <label for="Client">Client ID</label>
+                <small class="text-danger" style="@(_showClientError ? "" : "display:none;")">Enter valid Client ID</small>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="Username" placeholder="Username" @bind="_username">
+                <label for="Username">Username</label>
+                <small class="text-danger" style="@(_showUsernameError ? "" : "display:none;")">Enter valid Username</small>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="Password" placeholder="Password" @bind="_password">
+                <label for="Password">Password</label>
+                <small class="text-danger" style="@(_showPasswordError ? "" : "display:none;")">Enter valid Password</small>
+            </div>
+
+            <div class="form-floating mb-3" style="@(_showIpAddress ? "" : "display:none;")">
+                <input type="text" class="form-control" id="IP" placeholder="API URL" @bind="_ipAddress">
+                <label for="IP">API URL</label>
+                <small class="text-danger" style="@(_showIpError ? "" : "display:none;")">Enter valid API URL</small>
+            </div>
+
+            <!-- Buttons -->
+            <div class="d-grid gap-2 mt-4">
+                <button class="btn btn-primary btn-lg" @onclick="() => UserLogin()">Login</button>
+                <button class="btn btn-outline-danger btn-lg" @onclick="ClearData">Clear Data</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="card-footer text-center mt-3 border-0 bg-transparent">
+            <small class="text-muted">&copy; 2023 CSAT. All rights reserved. [V:-2.250614]</small>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _clientId = "";
+    private string _username = "";
+    private string _password = "";
+    private string _ipAddress = "";
+
+    private bool _isLoading = false;
+    private bool _showClientError = false;
+    private bool _showUsernameError = false;
+    private bool _showPasswordError = false;
+    private bool _showIpError = false;
+    private bool _showIpAddress = true;
+
+    private bool _clientValid = true;
+    private bool _usernameValid = true;
+    private bool _passwordValid = true;
+
+    private bool _hasLoadedCredentials = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_hasLoadedCredentials)
+        {
+            await LoadSavedCredentials();
+            _hasLoadedCredentials = true;
+            StateHasChanged();
+        }
+    }
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     await LoadSavedCredentials();
+    // }
+
+    private async Task LoadSavedCredentials()
+    {
+        try
+        {
+            _clientId = await LoginService.GetLocalStorageItem("client") ?? "";
+            _username = await LoginService.GetLocalStorageItem("Username") ?? "";
+            _ipAddress = await LoginService.GetLocalStorageItem("IP") ?? "";
+
+            if (!string.IsNullOrEmpty(_username))
+            {
+                _showIpAddress = false;
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading saved credentials: {ex.Message}");
+        }
+    }
+
+    private async Task UserLogin()
+    {
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+            var response = await Http.GetAsync($"api/CSATSU_RMS_Su2Login/{_clientId}/{_username}/{_password}");
+            if (response.IsSuccessStatusCode)
+            {
+                var userId = await response.Content.ReadAsStringAsync();
+               
+                using var doc = JsonDocument.Parse(userId);
+                UserState.UserId = doc.RootElement.GetProperty("userId").GetString();
+
+                _isLoading = false;
+                StateHasChanged();
+                NavigationManager.NavigateTo("/outlet-view");
+            }
+            else
+            {
+                _isLoading = false;
+                StateHasChanged();
+                await JS.InvokeVoidAsync("alert", "Invalid login credentials.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _isLoading = false;
+            StateHasChanged();
+            await JS.InvokeVoidAsync("alert", $"Login failed: {ex.Message}");
+        }
+    }
+
+
+
+    // Response model class
+    public class LoginResponse
+    {
+        public string UserId { get; set; }
+        public string UserFirstName { get; set; }
+        public string Token { get; set; }
+    }
+
+
+    private async Task LoginUser()
+    {
+        _showClientError = false;
+        _showUsernameError = false;
+        _showPasswordError = false;
+        _showIpError = false;
+
+        _clientValid = true;
+        _usernameValid = true;
+        _passwordValid = true;
+
+        bool isValid = true;
+
+        if (string.IsNullOrEmpty(_clientId))
+        {
+            _clientValid = false;
+            _showClientError = true;
+            isValid = false;
+        }
+
+        if (string.IsNullOrEmpty(_username))
+        {
+            _usernameValid = false;
+            _showUsernameError = true;
+            isValid = false;
+        }
+
+        if (string.IsNullOrEmpty(_password))
+        {
+            _passwordValid = false;
+            _showPasswordError = true;
+            isValid = false;
+        }
+
+        if (!isValid)
+        {
+            StateHasChanged();
+            return;
+        }
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Save credentials
+            await LoginService.SetLocalStorageItem("client", _clientId);
+            await LoginService.SetLocalStorageItem("Username", _username);
+
+            if (!string.IsNullOrEmpty(_ipAddress))
+            {
+                await LoginService.SetLocalStorageItem("IP", _ipAddress);
+                await LoginService.SetCookie("IPAddress", $"http://{_ipAddress}", 30);
+            }
+
+            // Attempt login
+            var loginResult = await LoginService.LoginRequest(_clientId, _username, _password, _ipAddress);
+
+            if (loginResult == "Active")
+            {
+                // Record usage log
+                await LoginService.RecordUsageLog(_clientId, _username);
+
+                // Get restaurant info
+                var restaurantInfo = await LoginService.GetRestaurantInformation();
+                await LoginService.SetCookie("Restinfo", restaurantInfo, 30);
+
+                // Validate attributes
+                var validationData = await LoginService.ValidateAttributes();
+                await LoginService.SetCookie("ValidationData", validationData, 30);
+
+                // Check SC values
+                var scValues = await LoginService.GetBillGenCsValues();
+
+                if (scValues != null && scValues.Any(x => x.Value[4] == "M"))
+                {
+                    await JSRuntime.InvokeVoidAsync("swal", "Manual KOT is Not allowed");
+                    _isLoading = false;
+                    StateHasChanged();
+                    return;
+                }
+
+                // Save SC values and navigate to home
+                await LoginService.SetLocalStorageItem("SC_str", JsonSerializer.Serialize(scValues));
+                NavigationManager.NavigateTo("/home");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("swal", "Login Failed!", "User ID and Password is incorrect", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Login error: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("swal", "Login Failed!", "An error occurred during login", "error");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearData()
+    {
+        try
+        {
+            await LoginService.ClearAllData();
+            NavigationManager.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error clearing data: {ex.Message}");
+        }
+    }
+}

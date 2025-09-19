@@ -1,0 +1,68 @@
+﻿<footer class="app-footer">
+    <div class="footer-nav">
+        <ul class="nav">
+            <li class="nav-item">
+                <button class="nav-link @(IsActive ? "active" : "")" @onclick="OnHomeClick">
+                    <i class="bi bi-house"></i>
+                    <span class="nav-text">Home</span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" @onclick="OnTableClick">
+                    <i class="bi bi-binoculars"></i>
+                    <span class="nav-text">Table No</span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" @onclick="OnOrderTypeClick">
+                    <i class="bi bi-binoculars"></i>
+                    <span class="nav-text">Order Type</span>
+                </button>
+            </li>
+            <li class="nav-item centerbutton">
+                <button class="nav-link menu-button" @onclick="OnMenuClick">
+                    <span class="theme-radial-gradient">
+                        <i class="bi bi-grid"></i>
+                    </span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" @onclick="OnCoverClick">
+                    <i class="bi bi-binoculars"></i>
+                    <span class="nav-text">Cover</span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" @onclick="OnCartClick">
+                    <i class="bi bi-cart3"></i>
+                    <span class="nav-text">Cart</span>
+                    @if (CartCount > 0)
+                    {
+                        @* <span class="badge bg-primary rounded-pill">@CartCount</span> *@
+                        <span class="badge bg-danger rounded-pill position-absolute translate-middle"
+                              style="font-size: 0.8rem; right: 0px; padding: 0.3em ; line-height: 1.2; min-width: 1.8em; min-height: 1.8em;">
+                            @CartCount
+                        </span>
+                    }
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" @onclick="OnClearCartClick">
+                    <i class="bi bi-cart-x"></i>
+                    <span class="nav-text">Clear Cart</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+</footer>
+@code {
+    bool IsActive = true;
+    [Parameter] public int CartCount { get; set; } = 0;
+    [Parameter] public EventCallback OnHomeClick { get; set; }
+    [Parameter] public EventCallback OnTableClick { get; set; }
+    [Parameter] public EventCallback OnOrderTypeClick { get; set; }
+    [Parameter] public EventCallback OnMenuClick { get; set; }
+    [Parameter] public EventCallback OnCoverClick { get; set; }
+    [Parameter] public EventCallback OnCartClick { get; set; }
+    [Parameter] public EventCallback OnClearCartClick { get; set; }
+}

@@ -1,0 +1,224 @@
+﻿@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@inject UserState UserState
+@using HandHeldUi.Shared.Services
+
+<div class="sidebar-wrap sidebar-overlay @(IsOpen ? "open" : "")">
+    <div class="sidebar">
+        <!-- User Profile Section -->
+        <div class="sidebar-profile">
+            <div class="profile-bg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 194.287 141.794" class="menubg">
+                    <path d="M672.935,207.064c-19.639,1.079-25.462-3.121-41.258,10.881s-24.433,41.037-49.5,34.15-14.406-16.743-50.307-29.667-32.464-19.812-16.308-41.711S500.472,130.777,531.872,117s63.631,21.369,93.913,15.363,37.084-25.959,56.686-19.794,4.27,32.859,6.213,44.729,9.5,16.186,9.5,26.113S692.573,205.985,672.935,207.064Z"
+                          transform="translate(-503.892 -111.404)" fill="url(#linear-gradient)" />
+                </svg>
+            </div>
+
+            <div class="profile-content">
+                <figure class="avatar shadow-sm">
+                    <img id="restimg" src="assets/img/download.jpg" alt="" class="rounded-18" loading="lazy">
+                </figure>
+
+                <div class="profile-info">
+                    <h5>@RestaurantName</h5>
+                    <p class=" size-12">CSAT SU RMS Handheld App</p>
+                    <p class=" size-12">User ID: <span id="stwid">@UserState.UserId;</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="sidebar-nav">
+            <ul class="nav flex-column">
+                @foreach (var item in MenuItems)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(item.IsActive ? "active" : "")"
+                           href="@(item.IsDropdown ? "javascript:void(0)" : GetMenuLink(item, OutletId))"
+                           @onclick="() => OnMenuClick(item)">
+                            <div class="nav-icon">
+                                <i class="bi @item.Icon"></i>
+                            </div>
+                            <div class="nav-text">@item.Text</div>
+                            <div class="nav-arrow">
+                                @if (item.IsDropdown)
+                                {
+                                    <i class="bi @(item.IsExpanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-chevron-right"></i>
+                                }
+                            </div>
+                        </a>
+
+                        @if (item.IsDropdown && item.SubMenu?.Any() == true && item.IsExpanded && !string.IsNullOrEmpty(OutletId))
+                        {
+                            <ul class="dropdown-menu show" style="position:relative; border:none; background:transparent; padding-left:20px;">
+                                @foreach (var sub in item.SubMenu)
+                                {
+                                    <li>
+                                        <a class="nav-link @(sub.IsActive ? "active" : "")"
+                                           href="@GetMenuLink(sub, OutletId)"
+                                           @onclick="() => OnMenuItemClick(sub)">
+                                            <div class="nav-icon"><i class="bi @sub.Icon"></i></div>
+                                            <div class="nav-text">@sub.Text</div>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        </nav>
+
+        <footer class="sidebar-footer">
+            <p class="text-muted size-12" id="versions">V:-2.250614</p>
+            <p class="text-muted size-12" id="ip">@IpAddress</p>
+        </footer>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string RestaurantName { get; set; } = "Restaurant Name";
+    // [Parameter] public string UserId { get; set; } = "User123";
+    [Parameter] public string IpAddress { get; set; } = "192.168.1.1";
+    [Parameter] public bool IsOpen { get; set; } = false;
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    public List<MenuItem> MenuItems { get; set; } = new()
+    {
+        new MenuItem { Text = "Home", Icon = "bi-house-door", Link = "../outlet-view", IsActive = true },
+        new MenuItem {
+            Text = "POS", Icon = "bi-cart", IsDropdown = true,
+            SubMenu = new List<MenuItem>
+            {
+                new MenuItem { Text = "Restaurant", Icon="bi-shop", Link = "../menu/{OutletId}?PosCode=001" },
+                new MenuItem { Text = "Takeaway", Icon="bi-bag", Link = "../menu/{OutletId}?PosCode=002" },
+                new MenuItem { Text = "Home Delivery", Icon="bi-truck", Link = "../menu/{OutletId}?PosCode=003" }
+            }
+        },
+        new MenuItem { Text = "Feedback", Icon = "bi-chat-text", Link = "#" },
+        new MenuItem { Text = "Reservation", Icon = "bi-newspaper", Link = "#" },
+        new MenuItem { Text = "Guest Arrival", Icon = "bi-graph-up", Link = "#" },
+        new MenuItem { Text = "Table Assign", Icon = "bi-graph-up", Link = "#" },
+        new MenuItem { Text = "Style", Icon = "bi-palette", Link = "../home/style", HasStar = true },
+        new MenuItem { Text = "Orders", Icon = "bi-file-earmark-text", Link = "#", BadgeText = "running" },
+        new MenuItem { Text = "Running Table Explorer", Icon = "bi-file-earmark-text", Link = "../home/RunningTableExplorer" },
+        new MenuItem { Text = "Reservation Explorer", Icon = "bi-file-earmark-text", Link = "../home/ReservationExplorer" },
+        new MenuItem { Text = "Logout", Icon = "bi-box-arrow-right", Link = "../" }
+    };
+
+    private string OutletId { get; set; } = "";
+    // public string UserId { get; set; } = "";
+    private bool _isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshOutletId();
+            _isInitialized = true;
+        }
+        else
+        {
+            // Always refresh outletId from localStorage on subsequent renders
+            await RefreshOutletId();
+        }
+
+    }
+
+    private async Task RefreshOutletId()
+    {
+        try
+        {
+            var currentOutlet = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+
+            if (!string.IsNullOrEmpty(currentOutlet) && OutletId != currentOutlet)
+            {
+                OutletId = currentOutlet;
+                StateHasChanged();
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            // Handle JS interop errors (e.g., during prerendering)
+            Console.WriteLine($"Error accessing localStorage: {ex.Message}");
+        }
+    }
+
+    private string GetMenuLink(MenuItem item, string outletId)
+    {
+        if (item.Link.Contains("{OutletId}") && !string.IsNullOrEmpty(outletId))
+        {
+            return item.Link.Replace("{OutletId}", outletId);
+        }
+        return item.Link;
+    }
+
+    private async Task CloseMenu()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    private async Task OnMenuClick(MenuItem item)
+    {
+        if (item.IsDropdown)
+        {
+            item.IsExpanded = !item.IsExpanded; // Toggle dropdown
+        }
+        else
+        {
+            await OnMenuItemClick(item); // Normal navigation
+        }
+    }
+
+    private async Task OnMenuItemClick(MenuItem item)
+    {
+        // Ensure OutletId is up-to-date before navigation
+        if (_isInitialized)
+        {
+            await RefreshOutletId();
+        }
+
+        // Update active states
+        foreach (var menuItem in MenuItems)
+        {
+            menuItem.IsActive = menuItem == item;
+
+            if (menuItem.SubMenu != null)
+            {
+                foreach (var sub in menuItem.SubMenu)
+                {
+                    sub.IsActive = sub == item;
+                }
+            }
+        }
+
+        // If it's a dropdown item, don't navigate, just toggle
+        if (!item.IsDropdown && !string.IsNullOrEmpty(item.Link))
+        {
+            // Navigate to the link with current OutletId
+            var finalLink = GetMenuLink(item, OutletId);
+            NavigationManager.NavigateTo(finalLink);
+        }
+
+        StateHasChanged();
+    }
+
+    public class MenuItem
+    {
+        public string Text { get; set; }
+        public string Icon { get; set; }
+        public string Link { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsDropdown { get; set; }
+        public bool HasStar { get; set; }
+        public string BadgeText { get; set; }
+        public List<MenuItem>? SubMenu { get; set; }
+        public bool IsExpanded { get; set; }
+    }
+}

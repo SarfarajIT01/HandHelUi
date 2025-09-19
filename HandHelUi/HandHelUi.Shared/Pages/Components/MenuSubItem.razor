@@ -1,0 +1,529 @@
+﻿@page "/menu-popup"
+@using HandHelUi.Shared.Models
+@inject CartState CartState
+@using HandHeldUi.Shared.Services
+@* @implements IDisposable *@
+@inject IJSRuntime JS
+
+@if (IsOpen && SelectedItem != null)
+{
+    <div class="table-modal-overlay">
+        <div class="table-modal-content_subItem">
+            <!-- Header -->
+            <div class="table-modal-header mb-0">
+                <h5 class="fw-bold">@SelectedItem.ItemName</h5>
+                <button class="btn-close" style="margin-top: -20px" @onclick="ClosePopup"></button>
+            </div>
+
+            <div class="alert alert-info p-2" role="alert">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        @if (AllGroups.Count > 0 && CurrentGroupIndex < AllGroups.Count)
+                        {
+                            <strong>
+                                @AllGroups[CurrentGroupIndex].FirstOrDefault()?.SubGrpName
+                            </strong>
+                        }
+                    </div>
+
+                    <div class="flex-grow-1 text-center">
+                        <strong>
+                            @if (SelectedItemMinQty > 0)
+                            {
+                                <text>Mandatory: Select at least @SelectedItemMinQty and up to @SelectedItemMaxQty</text>
+                            }
+                            else if (SelectedItemMaxQty < 1)
+                            {
+                                <text>restricted: You can not select subitem</text>
+                                              }
+                            else
+                            {
+                                <text>Optional: Select up to @SelectedItemMaxQty subitems</text>
+                            }
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Show only current group -->
+            @if (AllGroups.Count > 0 && CurrentGroupIndex < AllGroups.Count)
+            {
+                <div class="modal-body">
+                    <div class="container">
+                        <div class="row g-3">
+                            @foreach (var sub in AllGroups[CurrentGroupIndex])
+                            {
+                                var parentCartItem = CartState.CartItems.FirstOrDefault(ci => ci.Name == SelectedItem.ItemName && ci.ItemCode == SelectedItem.ItemCode);
+                                var subItemExists = parentCartItem != null && parentCartItem.CartSubItem.Any(csi => csi.SubItemName == sub.SubItemName);
+
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <div class="card food-card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">@sub.SubItemName</h6>
+                                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                                <span class="food-price">₹ @sub.SubItemRates</span>
+                                                <div class="d-flex align-items-center">
+                                                    @if (subItemExists)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="() => DecreaseItemQty(sub)">
+                                                            <i class="bi bi-bag-dash"></i>
+                                                        </button>
+                                                        <span class="mx-2">Added</span>
+                                                    }
+                                                    <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="() => AddToCart(sub)">
+                                                        <i class="bi bi-bag-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Footer -->
+            <div class="table-modal-footer">
+                @if (CurrentGroupIndex < AllGroups.Count - 1)
+                {
+                    @if (selectedCount >= SelectedItemMinQty && selectedCount > 0)
+                    {
+                        <button class="btn-back" @onclick="() => GoToNextGroup()">Next</button>
+                    }
+                    else
+                    {
+                        <button class="btn-back" @onclick="GoToPreviousGroup">BACK</button>
+                    }
+                }
+                else
+                {
+
+                    <button class="btn-back" @onclick="GoToPreviousGroup">BACK</button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public MenuItem? SelectedItem { get; set; }
+
+    private SubItem? LastAddedSubItem { get; set; }
+    private float SelectedItemMinQty { get; set; }
+    private float SelectedItemMaxQty { get; set; }
+    private float selectedCount { get; set; }
+    private float maxQty { get; set; }
+    private float MinQty { get; set; }
+
+    private int CurrentGroupIndex { get; set; } = 0;  // Works for SubItems & Addons
+    private List<List<SubItem>> AllGroups { get; set; } = new(); // Unified list of groups
+
+    protected override void OnInitialized()
+    {
+        CartState.OnMaxSubItemsReached += ClosePopupOnMaxSubItems; //Subscribe to the event
+        CartState.MaxSubItemsReached += ShowPopupOnMaxSubItems; //Subscribe to the event
+    }
+
+    // protected override void OnParametersSet()
+    // {
+    //     CurrentGroupIndex = 0;
+    //     AllGroups.Clear();
+
+    //     if (SelectedItem != null)
+    //     {
+
+    //         if (SelectedItem.SubItems?.Any() == true)
+    //         {
+    //             foreach (var group in SelectedItem.SubItems)
+    //                 AllGroups.Add(group);
+    //         }
+
+    //         else if (SelectedItem.CommonAddons?.Any() == true)
+    //         {
+    //             foreach (var group in SelectedItem.CommonAddons)
+    //             {
+
+    //                 var subGroup = group.Select(addon => new SubItem
+    //                 {
+    //                     SubGrpId = addon.SubGrpId,
+    //                     SubGrpName = addon.SubGrpName,
+    //                     SubItemName = addon.SubItemName,
+    //                     SubItemRates = addon.SubItemRates,
+    //                     SubMinQty = addon.SubMinQty,
+    //                     SubMaxQty = addon.SubMaxQty
+    //                 }).ToList();
+
+    //                 AllGroups.Add(subGroup);
+    //             }
+    //         }
+
+    //         Set Min/Max for first group
+    //         if (AllGroups.Any())
+    //         {
+    //             SelectedItemMinQty = AllGroups[CurrentGroupIndex].Min(s => s.SubMinQty ?? 0);
+    //             SelectedItemMaxQty = AllGroups[CurrentGroupIndex].Max(s => s.SubMaxQty ?? 0);
+    //         }
+    //         else
+    //         {
+    //             SelectedItemMinQty = 0;
+    //             SelectedItemMaxQty = 0;
+    //         }
+    //     }
+    // }
+
+    protected override void OnParametersSet()
+    {
+        if (SelectedItem != null)
+        {
+
+            if (_lastItemCode != SelectedItem.ItemCode)
+            {
+                CurrentGroupIndex = 0; 
+                _lastItemCode = SelectedItem.ItemCode;
+
+                AllGroups.Clear();
+
+                if (SelectedItem.SubItems?.Any() == true)
+                {
+                    foreach (var group in SelectedItem.SubItems)
+                    {
+                        var subGroup = group.Select(subItem => new SubItem
+                        {
+                            SubGrpId = subItem.SubGrpId,
+                            SubGrpName = subItem.SubGrpName,
+                            SubItemName = subItem.SubItemName,
+                            SubItemRates = subItem.SubItemRates,
+                            SubMinQty = subItem.SubMinQty,
+                            SubMaxQty = subItem.SubMaxQty,
+                            IsSubitem = "S"   
+                        }).ToList();
+
+                        AllGroups.Add(subGroup);
+                    }
+                }
+                else if (SelectedItem.CommonAddons?.Any() == true)
+                {
+                    foreach (var group in SelectedItem.CommonAddons)
+                    {
+                        var subGroup = group.Select(addon => new SubItem
+                        {
+                            SubGrpId = addon.SubGrpId,
+                            SubGrpName = addon.SubGrpName,
+                            SubItemName = addon.SubItemName,
+                            SubItemRates = addon.SubItemRates,
+                            SubMinQty = addon.SubMinQty,
+                            SubMaxQty = addon.SubMaxQty,
+                            IsAddon = "A"   
+                        }).ToList();
+
+                        AllGroups.Add(subGroup);
+                    }
+                }
+            }
+
+            if (AllGroups.Any())
+            {
+                SelectedItemMinQty = AllGroups[CurrentGroupIndex].Min(s => s.SubMinQty ?? 0);
+                SelectedItemMaxQty = AllGroups[CurrentGroupIndex].Max(s => s.SubMaxQty ?? 0);
+            }
+            else
+            {
+                SelectedItemMinQty = 0;
+                SelectedItemMaxQty = 0;
+            }
+        }
+    }
+
+    // Helper field for comparison
+    private string? _lastItemCode;
+
+
+    // private async void AddToCart(SubItem subItem)
+    // {
+    //     if (SelectedItem == null || subItem == null || string.IsNullOrEmpty(subItem.SubItemName))
+    //         return;
+
+    //     LastAddedSubItem = subItem;
+    //     CartState.AddSubItemToCart(SelectedItem, subItem);
+    //     CartState.PrepareGroupLimits(SelectedItem);
+    //     CartState.AddSubItemToCart(SelectedItem, subItem, CurrentGroupIndex);
+
+    //     Update selectedCount and MinQty at component level
+    //     var currentGroup = AllGroups[CurrentGroupIndex];
+    //     selectedCount = currentGroup.Count(item =>
+    //         CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
+
+    //     MinQty = currentGroup.Min(g => g.SubMinQty ?? 0);
+    //     SelectedItemMinQty = MinQty;
+    //     SelectedItemMaxQty = currentGroup.Max(g => g.SubMaxQty ?? 0);
+
+    //     Automatically move to next group if max reached
+    //     if (selectedCount >= SelectedItemMaxQty)
+    //     {
+    //         if (CurrentGroupIndex < AllGroups.Count - 1)
+    //         {
+    //             CurrentGroupIndex++;
+    //             var nextGroup = AllGroups[CurrentGroupIndex];
+    //             selectedCount = nextGroup.Count(item =>
+    //                 CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
+    //             MinQty = nextGroup.Min(g => g.SubMinQty ?? 0);
+    //             SelectedItemMinQty = MinQty;
+    //             SelectedItemMaxQty = nextGroup.Max(g => g.SubMaxQty ?? 0);
+    //         }
+    //         else
+    //         {
+    //             await ClosePopup();
+    //         }
+    //     }
+
+    //     StateHasChanged();
+    // }
+
+
+
+    private async void AddToCart(SubItem subItem)
+    {
+        if (SelectedItem == null || subItem == null || string.IsNullOrEmpty(subItem.SubItemName))
+            return;
+
+        LastAddedSubItem = subItem;
+        CartState.PrepareGroupLimits(SelectedItem);
+        CartState.AddSubItemToCart(SelectedItem, subItem, CurrentGroupIndex);
+
+
+        var currentGroup = AllGroups[CurrentGroupIndex];
+
+
+        selectedCount = currentGroup.Count(item =>
+            CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
+        // int selectedCount = currentGroup.Count(item =>
+        //     CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
+
+        var maxQty = currentGroup.Max(g => g.SubMaxQty ?? 0);
+        var MinQty = currentGroup.Min(g => g.SubMinQty ?? 0);
+
+
+
+        if (selectedCount >= maxQty)
+        {
+            if (CurrentGroupIndex < AllGroups.Count - 1)
+            {
+                CurrentGroupIndex++;
+                SelectedItemMinQty = AllGroups[CurrentGroupIndex].Min(g => g.SubMinQty ?? 0);
+                SelectedItemMaxQty = AllGroups[CurrentGroupIndex].Max(g => g.SubMaxQty ?? 0);
+                StateHasChanged();
+            }
+            else
+            {
+                // Only close popup if this was last group AND its minQty fulfilled
+                await ClosePopup();
+            }
+        }
+        // StateHasChanged();
+    }
+
+    // private void GoToNextGroup()
+    // {
+    //     if (CurrentGroupIndex < AllGroups.Count - 1)
+    //     {
+    //         CurrentGroupIndex++;
+    //         UpdateGroupSelectionState();
+    //     }
+    //     else
+    //     {
+    //         _ = ClosePopup(); ✅ Last group reached → close popup
+    //     }
+    // }
+
+    // private void GoToPreviousGroup()
+    // {
+    //     if (CurrentGroupIndex > 0)
+    //     {
+    //         CurrentGroupIndex--;
+    //         UpdateGroupSelectionState();
+    //     }
+    //     else
+    //     {
+    //         _ = ClosePopup(); ✅ If already at first group → close popup
+    //     }
+    // }
+
+    private void GoToNextGroup()
+    {
+        if (CurrentGroupIndex < AllGroups.Count - 1)
+        {
+            CurrentGroupIndex++;
+            SelectedItemMinQty = AllGroups[CurrentGroupIndex].Min(s => s.SubMinQty ?? 0);
+            SelectedItemMaxQty = AllGroups[CurrentGroupIndex].Max(s => s.SubMaxQty ?? 0);
+        }
+        else
+        {
+            _ = ClosePopup();
+        }
+    }
+
+    private void GoToPreviousGroup()
+    {
+        if (CurrentGroupIndex > 0)
+        {
+            CurrentGroupIndex--;
+            SelectedItemMinQty = AllGroups[CurrentGroupIndex].Min(s => s.SubMinQty ?? 0);
+            SelectedItemMaxQty = AllGroups[CurrentGroupIndex].Max(s => s.SubMaxQty ?? 0);
+        }
+        else
+        {
+            _ = ClosePopup();
+        }
+    }
+
+
+    private void UpdateGroupSelectionState()
+    {
+        var currentGroup = AllGroups[CurrentGroupIndex];
+
+        selectedCount = currentGroup.Count(item =>
+            CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
+
+        MinQty = currentGroup.Min(g => g.SubMinQty ?? 0);
+        SelectedItemMinQty = MinQty;
+        SelectedItemMaxQty = currentGroup.Max(g => g.SubMaxQty ?? 0);
+
+        StateHasChanged();
+    }
+
+
+
+    private void DecreaseItemQty(SubItem subItem)
+    {
+        if (subItem == null || string.IsNullOrEmpty(subItem.SubItemName) || SelectedItem == null) return;
+        CartState.DecreaseItemQty(SelectedItem.ItemName, subItem.SubItemName);
+    }
+
+    private async Task ClosePopup()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    private async void ClosePopupOnMaxSubItems()
+    {
+        if (CurrentGroupIndex == AllGroups.Count - 1 || CurrentGroupIndex == 0)
+        {
+            IsOpen = false;
+            await IsOpenChanged.InvokeAsync(IsOpen);
+            StateHasChanged();
+        }
+    }
+
+    private async void ShowPopupOnMaxSubItems()
+    {
+        if (LastAddedSubItem != null && SelectedItemMinQty != 0 && AllGroups.Count < 1)
+        {
+            await JS.InvokeVoidAsync("alert", $"You can select only max {LastAddedSubItem.SubMaxQty} subitem for this item, {SelectedItem?.ItemName}!");
+            IsOpen = false;
+            await IsOpenChanged.InvokeAsync(IsOpen);
+        }
+        else if (AllGroups.Count > 0)
+        {
+            await JS.InvokeVoidAsync("alert", $"You can select only max {LastAddedSubItem.SubMaxQty} subitem for this item, {SelectedItem?.ItemName}!");
+        }
+        else if (SelectedItemMinQty == 0)
+        {
+            await JS.InvokeVoidAsync("alert", $"You can not select subitem for this item, {SelectedItem?.ItemName}!");
+            IsOpen = false;
+            await IsOpenChanged.InvokeAsync(IsOpen);
+        }
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        CartState.OnMaxSubItemsReached -= ClosePopupOnMaxSubItems; //Unsubscribe to prevent memory leaks
+        CartState.MaxSubItemsReached -= ClosePopupOnMaxSubItems; //Unsubscribe to prevent memory leaks
+    }
+}
+
+
+
+
+
+
+
+<style>
+    .table-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+    }
+
+    .table-modal-content_subItem {
+        background: #fff;
+        border-radius: 18px;
+        width: 95%;
+        max-width: 1100px;
+        height: 75vh; /* fixed popup height */
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+
+    .table-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .close-btn {
+        border: none;
+        background: none;
+        font-size: 28px;
+        cursor: pointer;
+    }
+
+    .table-modal-footer {
+        text-align: center;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-back {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: #fff;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .food-card {
+        @* border: none; *@
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        transition: all 0.2s ease-in-out;
+    }
+
+   
+
+        .food-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+
+    .food-price {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #198754;
+    }
+</style>
+

@@ -1,0 +1,26 @@
+﻿@* <Router AppAssembly="typeof(Layout.MainLayout).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router> *@
+
+<Router AppAssembly="typeof(Layout.MainLayout).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData"
+                   DefaultLayout="GetLayout(routeData.PageType)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
+
+@code {
+    private Type? GetLayout(Type page)
+    {
+        // Exclude Login page
+        if (page == typeof(Pages.Login))// adjust namespace
+            return null;
+
+        // All others use MainLayout
+        return typeof(Layout.MainLayout);
+    }
+}

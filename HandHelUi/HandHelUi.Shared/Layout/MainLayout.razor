@@ -1,0 +1,130 @@
+﻿@using HandHeldUi.Shared.Services
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject CartState CartState
+
+<link href="_content/HandHelUi.Shared/css/mainlayout.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="app-container @(sidebarOpen ? "sidebar-open" : "")">
+    <Header ToggleSidebar="ToggleSidebar" OnSearch="HandleSearch" />
+    <Sidebar @bind-IsOpen="sidebarOpen"
+             RestaurantName="@restaurantName"
+             IpAddress="@ipAddress" />
+    <main class="app-main">
+        @Body
+        <div class="avatar avatar-80 rounded-circle shadow-danger shadow-sm p-1 mb-3" style="display:none">
+            <div id="circlesaving"></div>
+        </div>
+        <div class="avatar avatar-80 rounded-circle shadow-warning shadow-sm p-1 mb-3" style="display:none">
+            <div id="circlesaving2"></div>
+        </div>
+    </main>
+    <Footer CartCount="@cartCount"
+            OnHomeClick="HomePage"
+            OnTableClick="LoadTableData"
+            OnOrderTypeClick="ShowOrderTypeModal"
+            OnMenuClick="ShowMenuModal"
+            OnCoverClick="ShowCoverModal"
+            OnCartClick="ShowCart"
+            OnClearCartClick="ClearCart" />
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
+
+@code {
+    private bool sidebarOpen = false;
+    private string restaurantName = "Restaurant Name";
+    private string ipAddress = "192.168.1.1";
+    private int cartCount = 0;
+    private string searchTerm = "";
+    private string outletId = "";
+    private string posCode = "";
+    private bool _isInitialized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CartState.OnCartChanged += UpdateCartCount;
+        UpdateCartCount();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId") ?? "001";
+            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode") ?? "001";
+            _isInitialized = true;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSidebar()
+    {
+        sidebarOpen = !sidebarOpen;
+    }
+
+    private async Task HandleSearch(string term)
+    {
+        searchTerm = term;
+        if (_isInitialized)
+        {
+            outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId") ?? "001";
+            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode") ?? "001";
+        }
+        Navigation.NavigateTo($"/menu/{outletId}?search={searchTerm}&posCode={posCode}");
+    }
+
+    private string GetSearchTerm()
+    {
+        return searchTerm;
+    }
+
+    private void ClearCart()
+    {
+        CartState.ClearCart();
+    }
+
+    private void HomePage()
+    {
+        Navigation.NavigateTo($"/menu/{outletId}?posCode={posCode}");
+    }
+
+    private void LoadTableData()
+    {
+        // Load table data logic
+    }
+
+    private void ShowOrderTypeModal()
+    {
+        // Show order type modal logic
+    }
+
+    private void ShowMenuModal()
+    {
+        // Show menu modal logic
+    }
+
+    private void ShowCoverModal()
+    {
+        // Show cover modal logic
+    }
+
+    private void ShowCart()
+    {
+        CartState.TriggerToggleCart();
+    }
+
+    private void UpdateCartCount()
+    {
+        cartCount = CartState.CartItems.Sum(i => i.Qty);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        CartState.OnCartChanged -= UpdateCartCount;
+    }
+}

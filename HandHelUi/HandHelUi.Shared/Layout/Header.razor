@@ -1,0 +1,90 @@
+﻿@* <header class="header" id="header1">
+    <div class="d-flex justify-content-between">
+        <!-- Menu Button -->
+        <button @onclick="ToggleSidebar" class="btn menu-btn">
+            <i class="bi bi-list fs-5"></i>
+            <div>
+                <span class="title" id="title-pos" style="font-size: 11px;"></span>
+                <span class="title" id="title-date" style="font-size: 11px;">
+                    @DateTime.Now.ToString("MM/dd/yyyy")
+                </span>
+            </div>
+        </button>
+
+        <!-- Search Bar (Enter key search only) -->
+        <div class="mx-2" style="flex:1; max-width:300px;">
+            <input type="text" class="form-control form-control-sm h-100"
+                   placeholder="Search..."
+                   @bind="CurrentSearch"
+                   @onkeydown="HandleKeyDown" />
+        </div>
+
+        <!-- Logo -->
+        <div class="logo-small">
+            <img src="_content/HandHelUi.Shared/assets/img/csat_logo.png"
+                 style="height:40px;width:auto"
+                 alt="CSAT Logo" loading="lazy" />
+        </div>
+    </div>
+</header>
+
+@code {
+    [Parameter] public EventCallback ToggleSidebar { get; set; }
+    [Parameter] public EventCallback<string> ToggleSearch { get; set; }
+
+    private string CurrentSearch { get; set; } = "";
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && ToggleSearch.HasDelegate)
+        {
+            await ToggleSearch.InvokeAsync(CurrentSearch);
+        }
+    }
+} *@
+
+<header class="header" id="header1">
+    <div class="d-flex justify-content-between">
+        <!-- Menu Button -->
+        <button @onclick="ToggleSidebar" class="btn menu-btn">
+            <i class="bi bi-list fs-5"></i>
+            <div>
+                <span class="title" id="title-pos" style="font-size: 11px;"></span>
+                <span class="title" id="title-date" style="font-size: 11px;">
+                    @DateTime.Now.ToString("MM/dd/yyyy")
+                </span>
+            </div>
+        </button>
+
+        <!-- Search Bar (Real-time search) -->
+        <div class="mx-2" style="flex:1; max-width:300px;">
+            <input type="text" class="form-control form-control-sm h-100"
+                   placeholder="Search..."
+                   @bind="CurrentSearch"
+                   @oninput="HandleSearchInput" />
+        </div>
+
+        <!-- Logo -->
+        <div class="logo-small">
+            <img src="_content/HandHelUi.Shared/assets/img/csat_logo.png"
+                 style="height:40px;width:auto"
+                 alt="CSAT Logo" loading="lazy" />
+        </div>
+    </div>
+</header>
+
+@code {
+    [Parameter] public EventCallback ToggleSidebar { get; set; }
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    private string CurrentSearch { get; set; } = "";
+
+    private async Task HandleSearchInput(ChangeEventArgs e)
+    {
+        CurrentSearch = e.Value?.ToString() ?? "";
+        if (OnSearch.HasDelegate)
+        {
+            await OnSearch.InvokeAsync(CurrentSearch);
+        }
+    }
+}

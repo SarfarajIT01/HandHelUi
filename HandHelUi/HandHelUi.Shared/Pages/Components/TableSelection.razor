@@ -1,0 +1,243 @@
+﻿@using HandHelUi.Shared.Models
+@using Microsoft.AspNetCore.Components
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject UserState UserState
+@using HandHeldUi.Shared.Services 
+
+@if (IsOpen)
+{
+    <div class="table-modal-overlay">
+        <div class="table-modal-content">
+            <div class="table-modal-header">
+                <h5 class="fw-bold">Select Dining Table</h5>
+                <button class="close-btn" @onclick="ClosePopup">×</button>
+            </div>
+
+            <div class="table-grid">
+                @if (IsLoading)
+                {
+                    <div class="loader-container">
+                        <div class="loader"></div>
+                    </div>
+                }
+                else if (Tables?.Count > 0)
+                {
+                    @foreach (var table in Tables)
+                    {
+                        <div class="table-card @(table.RmscTblsts != null ? "occupied" : "free")"
+                             @onclick="() => SelectTable(table)">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="table-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M4 10h16v2H4v-2zm2 3h12l1 7h-2l-.5-3H7.5l-.5 3H5l1-7zM12 2a4 4 0 0 1 4 4h-8a4 4 0 0 1 4-4z" />
+                            </svg>
+                            <div class="table-number">Table @table.RmscCod</div>
+                            <div class="table-price">₹ @table.TableAmt</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p>No tables available.</p>
+                }
+            </div>
+
+            <div class="table-modal-footer">
+                <button class="btn-back" @onclick="ClosePopup">BACK</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? OutletId { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<PfbRmscMst> OnTableSelected { get; set; }
+
+    private List<PfbRmscMst> Tables { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            IsLoading = true;
+
+            var response = await Http.GetFromJsonAsync<List<PfbRmscMst>>("api/CSATSU_RMS_TableStatus");
+
+            if (response != null)
+            {
+                var CurrentHotelTable = response
+                    .Where(t => t.OutletId == OutletId)
+                    .Distinct()
+                    .OrderBy(t => t.RmscCod)
+                    .ToList();
+
+                Tables = CurrentHotelTable;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in OnInitializedAsync: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClosePopup()
+    {
+        IsOpen = false;
+        IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    private async Task SelectTable(PfbRmscMst table)
+    {
+        await OnTableSelected.InvokeAsync(table);
+        ClosePopup();
+    }
+}
+
+<style>
+    .table-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+    }
+
+    .table-modal-content {
+        background: #fff;
+        border-radius: 18px;
+        width: 90%;
+        max-width: 600px;
+        padding: 20px;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .table-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .close-btn {
+        border: none;
+        background: none;
+        font-size: 28px;
+        cursor: pointer;
+    }
+
+    .table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+        max-height: 400px; /* scroll limit */
+        overflow-y: auto;
+        padding: 5px;
+    }
+
+        .table-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-grid::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 10px;
+        }
+
+            .table-grid::-webkit-scrollbar-thumb:hover {
+                background: #999;
+            }
+
+    .table-card {
+        border-radius: 14px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+        .table-card:hover {
+            transform: scale(1.05);
+        }
+
+        .table-card.free {
+            background: #eafaf1;
+            color: #2b7a4b;
+        }
+
+        .table-card.occupied {
+            background: #fdebec;
+            color: #c62828;
+        }
+
+    .table-icon {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 10px;
+    }
+
+    .table-number {
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .table-price {
+        font-size: 12px;
+        color: #444;
+    }
+
+    .table-modal-footer {
+        text-align: center;
+    }
+
+    .btn-back {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: #fff;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    /* Loader Design */
+    .loader-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px; /* grid ke center me */
+        grid-column: 1 / -1; /* poora row cover kare */
+    }
+
+    .loader {
+        border: 6px solid #f3f3f3; /* halka background */
+        border-top: 6px solid #ff4b2b; /* theme color */
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        box-shadow: 0 0 15px rgba(255,75,43,0.4);
+    }
+
+    @@keyframes spin {
+        0%
+
+    {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+
+    }
+</style>

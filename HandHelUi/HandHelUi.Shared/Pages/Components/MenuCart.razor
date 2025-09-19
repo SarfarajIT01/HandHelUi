@@ -1,0 +1,385 @@
+﻿
+@inject CartState CartState
+@using HandHeldUi.Shared.Services
+@* @using HandHelUi.Shared.Pages.Menu *@
+@using HandHelUi.Shared.Models
+@* @using static HandHelUi.Shared.Pages.Menu *@
+
+<div class="cart-overlay @(IsOpen ? "open" : "")">
+    <div class="cart-container shadow-lg">
+        <div class="cart-header d-flex justify-content-between align-items-center p-3 border-bottom">
+            <h5 class="m-0">ITEMS</h5>
+            <img src="_content/HandHelUi.Shared/assets/img/csat_logo.png" class="" style="width: 80px;" alt="Logo" />
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Toggle">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="cart-body p-3">
+            @if (CartItems.Any())
+            {
+                @foreach (var item in CartItems)
+                {
+                    <div class="cart-item d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="mb-1">@item.Name</h6>
+                            <small class="text-danger">₹ @item.Price</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            @if (item.Qty > 0)
+                            {
+                                <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="() => OnDecreaseQty.InvokeAsync(item)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <span>@item.Qty</span>
+                                <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="() => OnIncreaseQty.InvokeAsync(item)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    @if (item.CartSubItem.Any())
+                    {
+                        <div class="ms-3">
+                            <small class="text-muted">Customizations:</small>
+                            @foreach (var subItem in item.CartSubItem)
+                            {
+                                <div class="cart-item d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <small>@subItem.SubItemName</small>
+                                        <small class="text-danger d-block">₹ @subItem.SubItemRates</small>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="() => RemoveSubItem(item, subItem)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <p class="text-center text-muted">Your cart is empty</p>
+            }
+        </div>
+        <div class="cart-footer p-3 border-top">
+            <div class="d-flex justify-content-between mb-2">
+                <strong>Total</strong>
+                <strong>₹ @(CartItems.Sum(x => x.Price * x.Qty) + CartItems.SelectMany(x => x.CartSubItem).Sum(x => x.SubItemRates ?? 0))</strong>
+            </div>
+            @if (IsCheckoutDisabled && CartItems.Any())
+            {
+                <div class="alert alert-danger text-center mb-2 p-1" role="alert">
+                    @GetDisableReason()
+                </div>
+            }
+            <button class="btn btn-gradient w-100" @onclick="CheckoutClicked" disabled="@IsCheckoutDisabled" title="@(IsCheckoutDisabled? GetDisableReason() : "")">
+                Proceed to Checkout
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback Toggle { get; set; }
+    [Parameter] public List<CartItem> CartItems { get; set; } = new();
+    [Parameter] public EventCallback<CartItem> OnIncreaseQty { get; set; }
+    [Parameter] public EventCallback<CartItem> OnDecreaseQty { get; set; }
+    [Parameter] public EventCallback OnCheckout { get; set; }
+    [Parameter] public List<MenuItem> MenuItems { get; set; } = new(); // Added to access sub-item MinQty
+
+    private bool IsCheckoutDisabled => !CartItems.Any() || HasSubItemMinQtyViolation();
+
+
+
+    // private bool HasSubItemMinQtyViolation()
+    // {
+    //     foreach (var cartItem in CartItems)
+    //     {
+
+    //         Find the corresponding MenuItem
+    //         var menuItem = MenuItems.FirstOrDefault(mi => mi.ItemName == cartItem.Name && mi.ItemCode == cartItem.ItemCode);
+
+    //         if (menuItem != null && menuItem.CommonAddons.Any())
+    //         {
+                
+    //             var allSubItems = menuItem.CommonAddons.SelectMany(subList => subList).ToList();
+                
+    //             var hasMinQtyRequirement = allSubItems.Any(sub => sub.SubMinQty > 0);
+
+    //             if (hasMinQtyRequirement)
+    //             {
+                    
+    //                 var subItemCount = cartItem.CartSubItem.Count;
+    //                 var minQtyRequired = menuItem.CommonAddons.Sum(subList => subList.FirstOrDefault()?.SubMinQty ?? 0);
+
+    //                 var minQtyRequired = allSubItems.Sum(sub => sub.SubMinQty ?? 0);
+    //                 var minQtyRequired = allSubItems.Max(sub => sub.SubMinQty);
+    //                 if (subItemCount < minQtyRequired)
+    //                 {
+    //                     return true; 
+    //                 }
+    //             }
+    //         }
+    //         else
+    //         {
+               
+    //             var allSubItems = menuItem.SubItems.SelectMany(subList => subList).ToList();
+                
+    //             var hasMinQtyRequirement = allSubItems.Any(sub => sub.SubMinQty > 0);
+    //             if (hasMinQtyRequirement)
+    //             {
+                    
+    //                 var subItemCount = cartItem.CartSubItem.Count;
+                    
+    //                 var minQtyRequired = allSubItems.Max(sub => sub.SubMinQty);
+    //                 if (subItemCount < minQtyRequired)
+    //                 {
+    //                     return true; 
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return false;
+    // }
+
+    private bool HasSubItemMinQtyViolation()
+    {
+        foreach (var cartItem in CartItems)
+        {
+            // Find corresponding MenuItem
+            var menuItem = MenuItems.FirstOrDefault(mi => mi.ItemName == cartItem.Name && mi.ItemCode == cartItem.ItemCode);
+            if (menuItem == null) continue;
+
+            // Check for CommonAddons first
+            if (menuItem.CommonAddons?.Any() == true)
+            {
+                foreach (var group in menuItem.CommonAddons)
+                {
+                   
+                    var groupSubItems = group.ToList();
+
+                    var groupMinQty = groupSubItems.Min(sub => sub.SubMinQty ?? 0);
+                    if (groupMinQty > 0)
+                    {
+                        
+                        var selectedCountInGroup = cartItem.CartSubItem
+                            .Count(csi => groupSubItems.Any(sub => sub.SubItemName == csi.SubItemName));
+
+                        if (selectedCountInGroup < groupMinQty)
+                        {
+                            return true; 
+                        }
+                    }
+                }
+            }
+            // Else check for SubItems
+            else if (menuItem.SubItems?.Any() == true)
+            {
+                foreach (var group in menuItem.SubItems)
+                {
+                    var groupSubItems = group.ToList();
+                    var groupMinQty = groupSubItems.Min(sub => sub.SubMinQty ?? 0);
+
+                    if (groupMinQty > 0)
+                    {
+                        var selectedCountInGroup = cartItem.CartSubItem
+                            .Count(csi => groupSubItems.Any(sub => sub.SubItemName == csi.SubItemName));
+
+                        if (selectedCountInGroup < groupMinQty)
+                        {
+                            return true; 
+                        }
+                    }
+                }
+            }
+        }
+
+        return false; 
+    }
+
+
+    // private string GetDisableReason()
+    // {
+    //     if (!CartItems.Any()) return "Cart is empty";
+    //     foreach (var cartItem in CartItems)
+    //     {
+    //         var menuItem = MenuItems.FirstOrDefault(mi => mi.ItemName == cartItem.Name && mi.ItemCode == cartItem.ItemCode);
+    //         if (menuItem != null && menuItem.CommonAddons.Any())
+    //         {
+    //             var allSubItems = menuItem.CommonAddons.SelectMany(subList => subList).ToList();
+    //             var hasMinQtyRequirement = allSubItems.Any(sub => sub.SubMinQty > 0);
+    //             if (hasMinQtyRequirement)
+    //             {
+    //                 var subItemCount = cartItem.CartSubItem.Count;
+    //                 var minQtyRequired = allSubItems.Max(sub => sub.SubMinQty);
+    //                 if (subItemCount < minQtyRequired)
+    //                 {
+    //                     return $"Please add at least {minQtyRequired} customization(s) for {cartItem.Name}";
+    //                 }
+    //             }
+    //         }
+    //         else
+    //         {
+    //             var allSubItems = menuItem.SubItems.SelectMany(subList => subList).ToList();
+    //             var hasMinQtyRequirement = allSubItems.Any(sub => sub.SubMinQty > 0);
+    //             if (hasMinQtyRequirement)
+    //             {
+    //                 var subItemCount = cartItem.CartSubItem.Count;
+    //                 var minQtyRequired = allSubItems.Max(sub => sub.SubMinQty);
+    //                 if (subItemCount < minQtyRequired)
+    //                 {
+    //                     return $"Please add at least {minQtyRequired} customization(s) for {cartItem.Name}";
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return "";
+    // }
+
+    private string GetDisableReason()
+    {
+        if (!CartItems.Any())
+            return "Cart is empty";
+
+        foreach (var cartItem in CartItems)
+        {
+            var menuItem = MenuItems.FirstOrDefault(mi => mi.ItemName == cartItem.Name && mi.ItemCode == cartItem.ItemCode);
+            if (menuItem == null) continue;
+
+            // Check CommonAddons group-wise
+            if (menuItem.CommonAddons?.Any() == true)
+            {
+                int groupIndex = 1;
+                foreach (var group in menuItem.CommonAddons)
+                {
+                    var groupSubItems = group.ToList();
+                    var groupMinQty = groupSubItems.Min(sub => sub.SubMinQty ?? 0);
+                    var groupName = groupSubItems.FirstOrDefault()?.SubGrpName ?? $"Group {groupIndex}";
+
+                    if (groupMinQty > 0)
+                    {
+                        var selectedCountInGroup = cartItem.CartSubItem
+                            .Count(csi => groupSubItems.Any(sub => sub.SubItemName == csi.SubItemName));
+
+                        if (selectedCountInGroup < groupMinQty)
+                        {
+                            return $"Please add at least {groupMinQty} customization(s) for {cartItem.Name} in '{groupName}'";
+                        }
+                    }
+                    groupIndex++;
+                }
+            }
+            // Check SubItems group-wise
+            else if (menuItem.SubItems?.Any() == true)
+            {
+                int groupIndex = 1;
+                foreach (var group in menuItem.SubItems)
+                {
+                    var groupSubItems = group.ToList();
+                    var groupMinQty = groupSubItems.Min(sub => sub.SubMinQty ?? 0);
+                    var groupName = groupSubItems.FirstOrDefault()?.SubGrpName ?? $"Group {groupIndex}";
+
+
+                    if (groupMinQty > 0)
+                    {
+                        var selectedCountInGroup = cartItem.CartSubItem
+                            .Count(csi => groupSubItems.Any(sub => sub.SubItemName == csi.SubItemName));
+
+                        if (selectedCountInGroup < groupMinQty)
+                        {
+                            return $"Please add at least {groupMinQty} customization(s) for {cartItem.Name} in '{groupName}'";
+                        }
+                    }
+                    groupIndex++;
+                }
+            }
+        }
+
+        return "";
+    }
+
+
+    private async Task CheckoutClicked()
+    {
+        if (OnCheckout.HasDelegate)
+        {
+            await OnCheckout.InvokeAsync();
+        }
+    }
+
+    private void RemoveSubItem(CartItem parentItem, CartSubItem subItem)
+    {
+        CartState.DecreaseItemQty(parentItem.Name, subItem.SubItemName);
+    }
+}
+<style>
+    /* Cart Overlay */
+    .cart-overlay {
+        position: fixed;
+        top: 0;
+        right: -400px;
+        width: 350px;
+        height: 100vh;
+        background: #fff;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+        transition: right 0.3s ease;
+        z-index: 1050;
+        /* border-radius: 20px 0 0 20px; */
+        display: flex;
+        flex-direction: column;
+    }
+
+        .cart-overlay.open {
+            right: 0;
+        }
+
+    .cart-container {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cart-body {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .btn-gradient {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        /* background-color:red; */
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 10px;
+        font-weight: 600;
+    }
+
+    .floating-cart-btn {
+        position: fixed;
+        bottom: 70px;
+        right: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        border: none;
+        border-radius: 50%;
+        padding: 15px;
+        color: #fff;
+        font-size: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+        .floating-cart-btn .badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: red;
+            color: white;
+            font-size: 12px;
+            border-radius: 50%;
+            padding: 2px 6px;
+        }
+
+</style>

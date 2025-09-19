@@ -1,0 +1,645 @@
+﻿@page "/menu/{OutletId}"
+@using HandHelUi.Shared.Models
+@using HandHelUi.Shared.Pages.Components
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject UserState UserState
+@inject CartState CartState
+@using HandHeldUi.Shared.Services
+<div class="min-vh-100 pb-3">
+    <!-- Header -->
+    @if (UniqueGroupNames?.Count > 0)
+    {
+        <div class="container pt-3">
+            <div class="menu-header">
+                <div class="d-flex justify-content-center align-items-center gap-5">
+                    @foreach (var group in UniqueGroupNames)
+                    {
+                        <div class="menu-tab @(ActiveGroup == group ? "active" : "")"
+                             @onclick="() => SetActiveGroup(group!)">
+                            @if (group == "FOOD")
+                            {
+                                <i class="bi bi-egg-fried fs-3"></i>
+                                <i class="bi bi-cup-hot fs-1 text-info"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-cup-straw fs-3"></i>
+                                <i class="bi bi-cup-straw fs-1 text-info"></i>
+                            }
+                            <div class="fw-bold">@group</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    <!-- Search Results Info -->
+    @if (!string.IsNullOrEmpty(SearchTerm))
+    {
+        <div class="container pt-2">
+            <div class="alert alert-info py-2">
+                <small>Searching for: <strong>@SearchTerm</strong> - Showing results from all categories</small>
+                <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ClearSearch">
+                    <i class="bi bi-x"></i> Clear
+                </button>
+            </div>
+        </div>
+    }
+    <!-- Cards -->
+    @if (AllMenuItems == null || AllMenuItems.Count == 0)
+    {
+        <div class="container pt-3">
+            <div class="alert alert-warning">No items found for this outlet.</div>
+        </div>
+    }
+    else if (FilteredMenuItems.Count() == 0 && !string.IsNullOrEmpty(SearchTerm))
+    {
+        <div class="container pt-3">
+            <div class="alert alert-warning">No items found matching "@SearchTerm".</div>
+        </div>
+    }
+    else
+    {
+        <div class="container mb-4">
+            <ul class="nav nav-pills justify-content-center flex-wrap">
+                @foreach (var category in MenuCategoryName)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(ActiveCategory == category ? "active" : "")"
+                           @onclick="() => SetActiveCategory(category!)">@category</a>
+                    </li>
+                }
+            </ul>
+        </div>
+        <div class="container">
+            <div class="row g-3">
+                @foreach (var item in FilteredMenuItems)
+                {
+                   var cartItem = CartState.CartItems.FirstOrDefault(ci => ci.Name == item.ItemName);
+                   var quantity = cartItem?.Qty ?? 0;
+                   <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                        <div class="card food-card h-100 @(item.SubItems?.Count > 0 || item.CommonAddons?.Count > 0 ? "has-subitems" : "")"
+                             @onclick="@(() => { if (item.SubItems?.Count > 0 || item.CommonAddons?.Count > 0) OpenSubItemPopup(item); })">
+                           <div class="card-body">
+                               <h6 class="card-title">@item.ItemName</h6>
+
+                               <!-- Show "Customized" badge only if has subitems -->
+                                @if (item.SubItems?.Count > 0)
+                               {
+                                   <h6 class="text-denger">Customized</h6>
+                               }
+
+                               @if (!string.IsNullOrEmpty(SearchTerm))
+                               {
+                                   <small class="text-muted d-block">Category: @item.MenuCategoryName</small>
+                                   <small class="text-muted">Group: @item.GroupName</small>
+                                   <small class="text-muted">OutletId: @item.OutletId </small>
+                                   <small class="text-muted">PosCode: @item.PosCode </small>
+                               }
+
+                                <div class="d-flex justify-content-between align-items-center @(item.SubItems?.Count > 0 || item.CommonAddons?.Count > 0 ? "mt-0" : "mt-3")">
+                                   <span class="food-price">₹ @item.Rates</span>
+                                   <div class="d-flex align-items-center">
+                                       @if (quantity > 0)
+                                       {
+                                           <button class="btn btn-sm btn-outline-danger rounded-circle"
+                                                   @onclick:stopPropagation
+                                                   @onclick="() => DecreaseItemQty(item)">
+                                               <i class="bi bi-bag-dash"></i>
+                                           </button>
+                                           <span class="mx-2">@quantity</span>
+                                       }
+                                       <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="() => AddToCart(item)">
+                                           <i class="bi bi-bag-plus"></i>
+                                       </button>
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- SubItem Component -->
+<MenuSubItem IsOpen="@ShowSubItemPopup"
+         IsOpenChanged="OnSubItemPopupChanged"
+         SelectedItem="@SelectedMenuItem"/>
+
+<!-- Cart Component -->
+<MenuCart IsOpen="@CartState.IsCartOpen"
+          Toggle="ToggleCart"
+          CartItems="@CartState.CartItems"
+          OnIncreaseQty="IncreaseQty"
+          OnDecreaseQty="DecreaseQty"
+          OnCheckout="@PlaceOrder"
+          MenuItems="@CurrentMenuItems" />
+
+<!-- Table Component -->
+<TableSelection IsOpen="@ShowTablePopup"
+                IsOpenChanged="OnTablePopupChanged"
+                OnTableSelected="HandleTableSelected"
+                OutletId="@OutletId" />
+
+@code {
+    private bool ShowSubItemPopup = false;
+    private MenuItem? SelectedMenuItem;
+
+    private void OpenSubItemPopup(MenuItem item)
+    {
+        SelectedMenuItem = item;
+        ShowSubItemPopup = true;
+    }
+
+    private void OnSubItemPopupChanged(bool value)
+    {
+        ShowSubItemPopup = value;
+        if (!value)
+            SelectedMenuItem = null;
+    }
+}
+
+@code {
+    [Parameter] public string? OutletId { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? posCode { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? search { get; set; }
+    private List<MenuItem> AllMenuItems = new(); // All items from API
+    private List<MenuItem> CurrentMenuItems = new(); // Items for current group/posCode
+    protected List<string?> UniqueGroupNames { get; set; } = new();
+    protected List<string?> MenuCategoryName { get; set; } = new();
+    private string ActiveGroup { get; set; } = "FOOD";
+    private string ActiveCategory { get; set; } = "";
+    private string SearchTerm { get; set; } = "";
+    private bool ShowTablePopup = false;
+    private PfbRmscMst? SelectedTable { get; set; }
+    // Cart properties moved to CartState
+    private float Total => CartState.CartItems.Sum(x => x.Price * x.Qty);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(search))
+        {
+            SearchTerm = search;
+        }
+        await LoadAllMenuData();
+        if (posCode == "001")
+        {
+            ShowTablePopup = true;
+        }
+        CartState.RequestToggleCart += HandleToggleCart;
+        CartState.OnCartChanged += StateHasChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        bool isSearchChanged = false;
+
+        if (!string.IsNullOrEmpty(search) && search != SearchTerm)
+        {
+            SearchTerm = search;
+            isSearchChanged = true;
+            StateHasChanged();
+        }
+
+        if (!isSearchChanged && AllMenuItems.Count > 0)
+        {
+            await ProcessMenuData();
+
+            if (posCode == "001")
+            {
+                if (SelectedTable == null)
+                    ShowTablePopup = true;
+            }
+        }
+    }
+
+    private IEnumerable<MenuItem> FilteredMenuItems
+    {
+        get
+        {
+            var filteredByOutletAndPos = AllMenuItems.Where(item =>
+                (item.GroupName == "FOOD" && item.PosCode == (posCode ?? "001")) ||
+                (item.GroupName == "BEVERAGE" && item.PosCode == (posCode ?? "001"))
+            );
+            if (!string.IsNullOrEmpty(SearchTerm))
+            {
+                return filteredByOutletAndPos.Where(item =>
+                    item.ItemName.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    item.MenuCategoryName.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    // (item.Description != null && item.Description.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    item.GroupName.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)
+                );
+            }
+            return string.IsNullOrEmpty(ActiveCategory)
+                ? CurrentMenuItems
+                : CurrentMenuItems.Where(m => m.MenuCategoryName == ActiveCategory);
+        }
+    }
+
+    private async Task SetActiveGroup(string group)
+    {
+        ActiveGroup = group;
+        await ProcessMenuData();
+        StateHasChanged();
+    }
+
+    private void SetActiveCategory(string category)
+    {
+        ActiveCategory = category;
+    }
+
+    private void ClearSearch()
+    {
+        SearchTerm = "";
+        Navigation.NavigateTo($"/menu/{OutletId}?posCode={posCode}");
+    }
+
+    private async Task LoadAllMenuData()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(OutletId))
+            {
+                OutletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "outletId", OutletId);
+            }
+            if (AllMenuItems.Count == 0)
+            {
+                var response = await Http.GetAsync($"api/CSATSU_RMS_ITEMS?outletId={OutletId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var menuItems = await response.Content.ReadFromJsonAsync<List<MenuItem>>();
+                    AllMenuItems = menuItems ?? new List<MenuItem>();
+                }
+                else
+                {
+                    AllMenuItems = new List<MenuItem>();
+                }
+            }
+            await ProcessMenuData();
+        }
+        catch (Exception ex)
+        {
+            AllMenuItems = new List<MenuItem>();
+            CurrentMenuItems = new List<MenuItem>();
+            Console.WriteLine($"Exception while fetching menu items: {ex}");
+        }
+    }
+
+    private async Task ProcessMenuData()
+    {
+        if (AllMenuItems.Count == 0)
+        {
+            CurrentMenuItems = new List<MenuItem>();
+            UniqueGroupNames = new List<string?>();
+            MenuCategoryName = new List<string?>();
+            return;
+        }
+        UniqueGroupNames = AllMenuItems.Select(m => m.GroupName).Distinct().ToList();
+        if (ActiveGroup == "FOOD" && posCode == null)
+            CurrentMenuItems = AllMenuItems.Where(m => m.GroupCode == "GRP_0001" && m.PosCode == "001").ToList();
+        else if (ActiveGroup == "FOOD" && posCode != null)
+            CurrentMenuItems = AllMenuItems.Where(m => m.GroupCode == "GRP_0001" && m.PosCode == posCode).ToList();
+        else if (ActiveGroup == "BEVERAGE" && posCode == null)
+            CurrentMenuItems = AllMenuItems.Where(m => m.GroupCode == "GRP_0002" && m.PosCode == "001").ToList();
+        else if (ActiveGroup == "BEVERAGE" && posCode != null)
+            CurrentMenuItems = AllMenuItems.Where(m => m.GroupCode == "GRP_0002" && m.PosCode == posCode).ToList();
+        else
+            CurrentMenuItems = AllMenuItems;
+        if (CurrentMenuItems.Any())
+        {
+            var currentPosCodeFromItems = CurrentMenuItems.First().PosCode;
+            if (!string.IsNullOrEmpty(currentPosCodeFromItems))
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "posCode", currentPosCodeFromItems);
+                posCode = currentPosCodeFromItems;
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "posCode", "001");
+                posCode = "001";
+            }
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", "posCode", "001");
+            posCode = "001";
+        }
+        MenuCategoryName = CurrentMenuItems.Select(c => c.MenuCategoryName).Distinct().ToList();
+        if (!MenuCategoryName.Contains(ActiveCategory) && MenuCategoryName.Count > 0)
+        {
+            ActiveCategory = MenuCategoryName.FirstOrDefault() ?? "";
+        }
+    }
+
+    private void OnTablePopupChanged(bool value) => ShowTablePopup = value;
+
+    private async void HandleTableSelected(PfbRmscMst table)
+    {
+        if (table != null)
+        {
+            SelectedTable = table;
+        }
+    }
+
+    private async void HandleToggleCart()
+    {
+        if (!CartState.IsCartOpen) // trying to open
+        {
+            if (SelectedTable == null && posCode == "001")
+            {
+                await JS.InvokeVoidAsync("alert", "Please select a table first!");
+                ShowTablePopup = true;
+                StateHasChanged();
+                return;
+            }
+
+            if (CartState.CartItems == null || !CartState.CartItems.Any())
+            {
+                await JS.InvokeVoidAsync("alert", "Your cart is empty! Please select item first!");
+                return;
+            }
+        }
+
+        CartState.IsCartOpen = !CartState.IsCartOpen;
+        StateHasChanged();
+    }
+
+    private void ToggleCart() => CartState.IsCartOpen = !CartState.IsCartOpen;
+
+    private void AddToCart(MenuItem menuItem)
+    {
+        CartState.AddToCart(menuItem);
+        ShowAddedToCartNotification(menuItem.ItemName);
+    }
+
+    private void DecreaseItemQty(MenuItem menuItem)
+    {
+        CartState.DecreaseItemQty(menuItem.ItemName);
+    }
+
+    private async Task PlaceOrder()
+    {
+        try
+        {
+            if (CartState.CartItems == null || !CartState.CartItems.Any())
+            {
+                await JS.InvokeVoidAsync("alert", "Your cart is empty!");
+                return;
+            }
+            if (posCode == "001" && SelectedTable == null)
+            {
+                await JS.InvokeVoidAsync("alert", "Please select a table first!");
+                ShowTablePopup = true;
+                return;
+            }
+            var order = new OrderItem
+            {
+                OrderNumber = GenerateOrderNumber(),
+                OutletId = OutletId ?? string.Empty,
+                PosCode = posCode,
+                PosName = CurrentMenuItems.First().PosName,
+                TableNumber = posCode == "001" ? SelectedTable?.RmscCod : null,
+                TotalAmount = CartState.CartItems.Sum(x => x.Price * x.Qty) +
+                              CartState.CartItems.SelectMany(x => x.CartSubItem).Sum(x => x.SubItemRates ?? 0),
+                Date = DateTime.Now,
+                CartItem = CartState.CartItems.Select(ci => new CartItems
+                {
+                    ItemName = ci.Name,
+                    ItemCode = ci.ItemCode,
+                    Quantity = ci.Qty,
+                    TaxType = ci.TaxType,
+                    Price = ci.Price,
+                    IsAddon = ci.IsAddon,
+                    IsSubItem = ci.IsSubitem,
+                    TaxStruCode = ci.TaxStruCode,
+                    GRP_SUB = "y",
+                    // Include sub-items in the order
+                    SubItem = ci.CartSubItem.Select(csi => new CartSubItems
+                    {
+                        SubItemName = csi.SubItemName,
+                        SubItemRates = csi.SubItemRates
+                    }).ToList()
+                }).ToList()
+            };
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/CSATSU_RMS_SubmitOrder");
+            if (!string.IsNullOrEmpty(UserState.UserId))
+            {
+                request.Headers.Add("X-UserId", UserState.UserId);
+            }
+            if (!string.IsNullOrEmpty(OutletId))
+            {
+                request.Headers.Add("X-OutletId", OutletId);
+            }
+            request.Content = JsonContent.Create(order);
+            var response = await Http.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Order #{order.OrderNumber} placed successfully!");
+                CartState.ClearCart();
+                SelectedTable = null;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Order failed: {error}");
+                await JS.InvokeVoidAsync("alert", "Failed to place order. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception in PlaceOrder: {ex}");
+            await JS.InvokeVoidAsync("alert", "An error occurred while placing the order.");
+        }
+    }
+
+    private string GenerateOrderNumber()
+    {
+        return $"ORD{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
+    }
+
+    // private void DecreaseItemQty(MenuItem menuItem)
+    // {
+    //     CartState.DecreaseItemQty(menuItem.ItemName);
+    // }
+
+    private void IncreaseQty(CartItem item)
+    {
+        CartState.IncreaseQty(item);
+    }
+
+    private void DecreaseQty(CartItem item)
+    {
+        CartState.DecreaseQty(item);
+    }
+
+    private void ShowAddedToCartNotification(string itemName)
+    {
+        Console.WriteLine($"Added {itemName} to cart");
+    }
+
+    
+
+    public void Dispose()
+    {
+        CartState.RequestToggleCart -= HandleToggleCart;
+        CartState.OnCartChanged -= StateHasChanged;
+    }
+}
+
+
+<style>
+
+     /* cart style for subitmes */
+    .card.has-subitems {
+        border: 2px solid #ffc107 !important;
+        background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.2);
+    }
+
+        .card.has-subitems .card-title {
+            color: #ff9800;
+            font-weight: bold;
+        }
+
+        .card.has-subitems .badge.bg-warning {
+            background-color: #ff9800 !important;
+            color: white;
+            font-weight: bold;
+            padding: 0.35em 0.65em;
+        }
+
+        .card.has-subitems::before {
+            content: "⚡";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.2rem;
+            color: #ffc107;
+        }
+        /* diffrent style */
+    /* .card.has-subitems {
+        border-left: 4px solid #ffc107 !important;
+        background-color: #fffdf6;
+    }
+
+        .card.has-subitems::before {
+            content: "⚡";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.2rem;
+            color: #ffc107;
+        } */
+</style>
+
+<style>
+    /* Header Styling */
+    .menu-header {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        /* margin-top: 1rem; */
+    }
+
+        .menu-header h3 {
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+
+    .menu-tab {
+        cursor: pointer;
+        text-align: center;
+        padding: 0.5rem 1rem;
+        border-radius: 1rem;
+        transition: all 0.3s ease-in-out;
+        background: #e9ecef;
+    }
+
+        .menu-tab.active {
+            /* background: #0d6efd; */
+            /* background: #e69c00; */
+            /* background: #ff1818; */
+            /* background: #f73563; */
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            color: white;
+        }
+
+        .menu-tab:hover {
+            background-color: #dee2e6;
+            color: black;
+        }
+
+
+    /* Category Tabs */
+    .nav-pills .nav-link {
+        border-radius: 25px;
+        margin: 0.25rem;
+        font-weight: 500;
+        color: black;
+        opacity: 0.9;
+        /* border: 2px solid transparent; /*
+            /* transition: border-color 0.3s ease; /* smooth hover effect */
+    }
+
+        .nav-pills .nav-link.active {
+            /* background-color: #0d6efd; */
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+        }
+
+    /* Cards */
+    .food-card {
+        /* border: none; */
+        /* border: var(--bs-card-border-width) solid var(--bs-card-border-color); */
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        transition: all 0.2s ease-in-out;
+    }
+
+        .food-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+
+        .food-card .card-body {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+    .food-price {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #198754;
+    }
+
+    .nav-item .nav-link:hover {
+        opacity: 1;
+        cursor: pointer;
+        /* color:white;
+        background: linear-gradient(135deg, var(--primary), var(--secondary)); */
+    }
+
+    /* Responsive Grid */
+    @@media (max-width: 768px) {
+        .food-card {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
