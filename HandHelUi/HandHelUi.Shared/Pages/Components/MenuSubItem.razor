@@ -119,61 +119,19 @@
     private float maxQty { get; set; }
     private float MinQty { get; set; }
 
-    private int CurrentGroupIndex { get; set; } = 0;  // Works for SubItems & Addons
-    private List<List<SubItem>> AllGroups { get; set; } = new(); // Unified list of groups
+    private int CurrentGroupIndex { get; set; } = 0;  
+    private List<List<SubItem>> AllGroups { get; set; } = new(); 
+
+    // Helper field for comparison
+    private string? _lastItemCode;
 
     protected override void OnInitialized()
     {
-        CartState.OnMaxSubItemsReached += ClosePopupOnMaxSubItems; //Subscribe to the event
-        CartState.MaxSubItemsReached += ShowPopupOnMaxSubItems; //Subscribe to the event
+        CartState.OnMaxSubItemsReached += ClosePopupOnMaxSubItems; 
+        CartState.MaxSubItemsReached += ShowPopupOnMaxSubItems; 
     }
 
-    // protected override void OnParametersSet()
-    // {
-    //     CurrentGroupIndex = 0;
-    //     AllGroups.Clear();
-
-    //     if (SelectedItem != null)
-    //     {
-
-    //         if (SelectedItem.SubItems?.Any() == true)
-    //         {
-    //             foreach (var group in SelectedItem.SubItems)
-    //                 AllGroups.Add(group);
-    //         }
-
-    //         else if (SelectedItem.CommonAddons?.Any() == true)
-    //         {
-    //             foreach (var group in SelectedItem.CommonAddons)
-    //             {
-
-    //                 var subGroup = group.Select(addon => new SubItem
-    //                 {
-    //                     SubGrpId = addon.SubGrpId,
-    //                     SubGrpName = addon.SubGrpName,
-    //                     SubItemName = addon.SubItemName,
-    //                     SubItemRates = addon.SubItemRates,
-    //                     SubMinQty = addon.SubMinQty,
-    //                     SubMaxQty = addon.SubMaxQty
-    //                 }).ToList();
-
-    //                 AllGroups.Add(subGroup);
-    //             }
-    //         }
-
-    //         Set Min/Max for first group
-    //         if (AllGroups.Any())
-    //         {
-    //             SelectedItemMinQty = AllGroups[CurrentGroupIndex].Min(s => s.SubMinQty ?? 0);
-    //             SelectedItemMaxQty = AllGroups[CurrentGroupIndex].Max(s => s.SubMaxQty ?? 0);
-    //         }
-    //         else
-    //         {
-    //             SelectedItemMinQty = 0;
-    //             SelectedItemMaxQty = 0;
-    //         }
-    //     }
-    // }
+    
 
     protected override void OnParametersSet()
     {
@@ -238,51 +196,7 @@
         }
     }
 
-    // Helper field for comparison
-    private string? _lastItemCode;
-
-
-    // private async void AddToCart(SubItem subItem)
-    // {
-    //     if (SelectedItem == null || subItem == null || string.IsNullOrEmpty(subItem.SubItemName))
-    //         return;
-
-    //     LastAddedSubItem = subItem;
-    //     CartState.AddSubItemToCart(SelectedItem, subItem);
-    //     CartState.PrepareGroupLimits(SelectedItem);
-    //     CartState.AddSubItemToCart(SelectedItem, subItem, CurrentGroupIndex);
-
-    //     Update selectedCount and MinQty at component level
-    //     var currentGroup = AllGroups[CurrentGroupIndex];
-    //     selectedCount = currentGroup.Count(item =>
-    //         CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
-
-    //     MinQty = currentGroup.Min(g => g.SubMinQty ?? 0);
-    //     SelectedItemMinQty = MinQty;
-    //     SelectedItemMaxQty = currentGroup.Max(g => g.SubMaxQty ?? 0);
-
-    //     Automatically move to next group if max reached
-    //     if (selectedCount >= SelectedItemMaxQty)
-    //     {
-    //         if (CurrentGroupIndex < AllGroups.Count - 1)
-    //         {
-    //             CurrentGroupIndex++;
-    //             var nextGroup = AllGroups[CurrentGroupIndex];
-    //             selectedCount = nextGroup.Count(item =>
-    //                 CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
-    //             MinQty = nextGroup.Min(g => g.SubMinQty ?? 0);
-    //             SelectedItemMinQty = MinQty;
-    //             SelectedItemMaxQty = nextGroup.Max(g => g.SubMaxQty ?? 0);
-    //         }
-    //         else
-    //         {
-    //             await ClosePopup();
-    //         }
-    //     }
-
-    //     StateHasChanged();
-    // }
-
+    
 
 
     private async void AddToCart(SubItem subItem)
@@ -300,8 +214,6 @@
 
         selectedCount = currentGroup.Count(item =>
             CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
-        // int selectedCount = currentGroup.Count(item =>
-        //     CartState.IsSubItemInCart(SelectedItem.ItemName, item.SubItemName));
 
         var maxQty = currentGroup.Max(g => g.SubMaxQty ?? 0);
         var MinQty = currentGroup.Min(g => g.SubMinQty ?? 0);
@@ -326,32 +238,7 @@
         // StateHasChanged();
     }
 
-    // private void GoToNextGroup()
-    // {
-    //     if (CurrentGroupIndex < AllGroups.Count - 1)
-    //     {
-    //         CurrentGroupIndex++;
-    //         UpdateGroupSelectionState();
-    //     }
-    //     else
-    //     {
-    //         _ = ClosePopup(); ✅ Last group reached → close popup
-    //     }
-    // }
-
-    // private void GoToPreviousGroup()
-    // {
-    //     if (CurrentGroupIndex > 0)
-    //     {
-    //         CurrentGroupIndex--;
-    //         UpdateGroupSelectionState();
-    //     }
-    //     else
-    //     {
-    //         _ = ClosePopup(); ✅ If already at first group → close popup
-    //     }
-    // }
-
+  
     private void GoToNextGroup()
     {
         if (CurrentGroupIndex < AllGroups.Count - 1)
@@ -442,8 +329,8 @@
 
     public void Dispose()
     {
-        CartState.OnMaxSubItemsReached -= ClosePopupOnMaxSubItems; //Unsubscribe to prevent memory leaks
-        CartState.MaxSubItemsReached -= ClosePopupOnMaxSubItems; //Unsubscribe to prevent memory leaks
+        CartState.OnMaxSubItemsReached -= ClosePopupOnMaxSubItems; 
+        CartState.MaxSubItemsReached -= ClosePopupOnMaxSubItems; 
     }
 }
 

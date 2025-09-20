@@ -41,6 +41,9 @@ namespace HandHelUi
             //builder.Services.AddScoped<ApiService>();
             builder.Services.AddSingleton<UserState>();
 
+            builder.Services.AddScoped<CartState>();
+
+
 
             builder.Services.AddSingleton<ILoginService, LoginService>();
 #if DEBUG

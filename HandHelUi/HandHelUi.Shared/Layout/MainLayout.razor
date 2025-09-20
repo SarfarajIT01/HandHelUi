@@ -1,4 +1,6 @@
-﻿@using HandHeldUi.Shared.Services
+﻿@using HandHelUi.Shared.Models
+@using HandHelUi.Shared.Pages.Components
+@using HandHeldUi.Shared.Services
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -22,6 +24,13 @@
             <div id="circlesaving2"></div>
         </div>
     </main>
+
+       <!-- Table Popup component goes here -->
+    <TableSelection OutletId="@outletId"
+                    IsOpen="@ShowTablePopup"
+                    IsOpenChanged="OnTablePopupChanged"
+                    OnTableSelected="HandleTableSelected" />
+
     <Footer CartCount="@cartCount"
             OnHomeClick="HomePage"
             OnTableClick="LoadTableData"
@@ -43,6 +52,8 @@
     private string outletId = "";
     private string posCode = "";
     private bool _isInitialized = false;
+    private bool ShowTablePopup = false;
+    public PfbRmscMst? SelectedTable { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -94,8 +105,19 @@
 
     private void LoadTableData()
     {
-        // Load table data logic
+        ShowTablePopup = true;
     }
+
+    private async void HandleTableSelected(PfbRmscMst table)
+    {
+        if (table != null)
+        {
+            SelectedTable = table;
+        }
+    }
+
+    private void OnTablePopupChanged(bool value) => ShowTablePopup = value;
+
 
     private void ShowOrderTypeModal()
     {

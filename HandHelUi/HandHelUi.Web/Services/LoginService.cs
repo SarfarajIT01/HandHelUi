@@ -7,7 +7,7 @@ using HandHelUi.Shared.Services;
 using Microsoft.JSInterop;
 
 namespace HandHelUi.Web.Services
-{
+{   
     public class LoginService : ILoginService
     {
         private readonly IJSRuntime _jsRuntime;
