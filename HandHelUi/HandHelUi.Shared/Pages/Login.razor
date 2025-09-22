@@ -94,11 +94,6 @@
         }
     }
 
-    // protected override async Task OnInitializedAsync()
-    // {
-    //     await LoadSavedCredentials();
-    // }
-
     private async Task LoadSavedCredentials()
     {
         try
@@ -126,17 +121,32 @@
         {
             _isLoading = true;
             StateHasChanged();
+
             var response = await Http.GetAsync($"api/CSATSU_RMS_Su2Login/{_clientId}/{_username}/{_password}");
             if (response.IsSuccessStatusCode)
             {
-                var userId = await response.Content.ReadAsStringAsync();
-               
-                using var doc = JsonDocument.Parse(userId);
-                UserState.UserId = doc.RootElement.GetProperty("userId").GetString();
+                var getCover = await Http.GetAsync("api/CSATSU_RMS_GetRunningDate");
+                if (getCover.IsSuccessStatusCode)
+                {
+                    var coverData = await getCover.Content.ReadAsStringAsync();
 
-                _isLoading = false;
-                StateHasChanged();
-                NavigationManager.NavigateTo("/outlet-view");
+                    // Parse JSON
+                    using var doc = JsonDocument.Parse(coverData);
+                    var rmsStwkot = doc.RootElement.GetProperty("rmsStwkot").GetString();
+                    var rmsCovkot = doc.RootElement.GetProperty("rmsCovkot").GetString();
+
+                    // Save to local storage
+                    await JS.InvokeVoidAsync("localStorage.setItem", "rmsStwkot", rmsStwkot);
+                    await JS.InvokeVoidAsync("localStorage.setItem", "rmsCovkot", rmsCovkot);
+
+                    var userId = await response.Content.ReadAsStringAsync();
+                    using var docUser = JsonDocument.Parse(userId);
+                    UserState.UserId = docUser.RootElement.GetProperty("userId").GetString();
+
+                    _isLoading = false;
+                    StateHasChanged();
+                    NavigationManager.NavigateTo("/outlet-view");
+                }
             }
             else
             {
@@ -152,6 +162,7 @@
             await JS.InvokeVoidAsync("alert", $"Login failed: {ex.Message}");
         }
     }
+
 
 
 

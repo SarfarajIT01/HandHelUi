@@ -141,6 +141,9 @@
                 OnTableSelected="HandleTableSelected"
                 OutletId="@OutletId" />
 
+<Stword IsStewordOpen="@ShowStwordPopup" />
+    
+
 @code {
     private bool ShowSubItemPopup = false;
     private MenuItem? SelectedMenuItem;
@@ -175,6 +178,7 @@
     private string ActiveCategory { get; set; } = "";
     private string SearchTerm { get; set; } = "";
     private bool ShowTablePopup = false;
+    private bool ShowStwordPopup = false;
     private PfbRmscMst? SelectedTable { get; set; }
     private float Total => CartState.CartItems.Sum(x => x.Price * x.Qty);
 
@@ -408,6 +412,8 @@
     {
         try
         {
+            var rmsStwkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsStwkot");
+            var rmsCovkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsCovkot");
             if (CartState.CartItems == null || !CartState.CartItems.Any())
             {
                 await JS.InvokeVoidAsync("alert", "Your cart is empty!");
@@ -418,6 +424,19 @@
                 await JS.InvokeVoidAsync("alert", "Please select a table first!");
                 ShowTablePopup = true;
                 return;
+            }
+            if (rmsStwkot == "y" && rmsCovkot == "n")
+            {
+                ShowStwordPopup = true;
+                return;
+            }
+            else if (rmsStwkot == "n" && rmsCovkot == "y")
+            {
+
+            }
+            else if (rmsStwkot == "y" && rmsCovkot == "y")
+            {
+                
             }
             var order = new OrderItem
             {

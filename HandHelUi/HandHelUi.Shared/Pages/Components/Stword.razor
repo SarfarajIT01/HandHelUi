@@ -1,0 +1,101 @@
+﻿@using HandHelUi.Shared.Models
+@using Microsoft.AspNetCore.Components
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject UserState UserState
+@using HandHeldUi.Shared.Services
+
+@if (IsStewordOpen)
+{
+    <div class="table-modal-overlay">
+        <div class="table-modal-content">
+            <div class="table-modal-header">
+                <h5 class="fw-bold">Select Dining Table</h5>
+                <button class="btn-close" style="margin-top: -16px; margin-right: 4px;" @onclick="ClosePopup"></button>
+            </div>
+
+            <div class="table-grid">
+                @if (IsLoading)
+                {
+                    <div class="loader-container">
+                        <div class="loader"></div>
+                    </div>
+                }
+                else if (stword?.Count > 0)
+                {
+                    @foreach (var stw in stword)
+                    {
+                        <div class="table-card"
+                             @onclick="() => SelectStword(stw)">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="table-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M4 10h16v2H4v-2zm2 3h12l1 7h-2l-.5-3H7.5l-.5 3H5l1-7zM12 2a4 4 0 0 1 4 4h-8a4 4 0 0 1 4-4z" />
+                            </svg>
+                            <div class="table-number">Table @stw.EmpName</div>
+                            <div class="table-price">₹ @stw.EmpCode</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p>No tables available.</p>
+                }
+            </div>
+
+            <div class="table-modal-footer">
+                <button class="btn-back" @onclick="ClosePopup">BACK</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+
+    [Parameter] public bool IsStewordOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<stwordModel> OnTableSelected { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private List<stwordModel>? stword { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            IsLoading = true;
+
+            var getStword = await Http.GetAsync("api/CSATSU_RMS_GetStiwards");
+            if (getStword.IsSuccessStatusCode)
+            {
+                var jsonString = await getStword.Content.ReadAsStringAsync();
+                stword = System.Text.Json.JsonSerializer.Deserialize<List<stwordModel>>(jsonString);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in OnInitializedAsync: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectStword(stwordModel table)
+    {
+        await OnTableSelected.InvokeAsync(table);
+        ClosePopup();
+    }
+
+    private void ClosePopup()
+    {
+        IsStewordOpen = false;
+        IsOpenChanged.InvokeAsync(IsStewordOpen);
+    }
+
+    public partial class stwordModel
+    {
+        public string? EmpCode { get; set; }
+
+        public string? EmpName { get; set; }
+    }
+}
