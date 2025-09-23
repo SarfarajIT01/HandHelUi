@@ -1,0 +1,73 @@
+﻿@if (IsOpen)
+{
+    <div class="table-modal-overlay">
+        <div class="table-modal-content">
+            <div class="table-modal-header">
+                <h5 class="fw-bold">Enter Covor</h5>
+                <button class="btn-close" @onclick="ClosePopup"></button>
+            </div>
+
+            <div class="quantity-input-container">
+                <input type="number" min="1" @bind="Quantity" class="quantity-input" />
+            </div>
+
+            <div class="table-modal-footer">
+                <button class="btn-back" @onclick="ConfirmCovor">OK</button>
+                <button class="btn-back cancel" @onclick="ClosePopup">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    [Parameter] public short Quantity { get; set; } = 0; 
+    [Parameter] public EventCallback<short> OnCoverConfirmed { get; set; }
+
+    private async Task ConfirmCovor()
+    {
+        await OnCoverConfirmed.InvokeAsync(Quantity);
+        ClosePopup();
+    }
+
+    private void ClosePopup()
+    {
+        IsOpen = false;
+        IsOpenChanged.InvokeAsync(IsOpen);
+    }
+}
+<style>
+    .quantity-input-container {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+    }
+
+    .quantity-input {
+        width: 80px;
+        padding: 8px;
+        font-size: 16px;
+        text-align: center;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+
+    .btn-back {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: #fff;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 0 5px;
+    }
+
+        .btn-back.cancel {
+            background: #ccc;
+            color: #333;
+        }
+
+</style>

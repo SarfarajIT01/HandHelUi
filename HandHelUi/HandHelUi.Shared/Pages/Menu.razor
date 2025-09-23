@@ -7,6 +7,8 @@
 @inject UserState UserState
 @inject CartState CartState
 @using HandHeldUi.Shared.Services
+@using static HandHelUi.Shared.Pages.Components.Steword
+
 <div class="min-vh-100 pb-3">
     <!-- Header -->
     @if (UniqueGroupNames?.Count > 0)
@@ -123,8 +125,8 @@
 
 <!-- SubItem Component -->
 <MenuSubItem IsOpen="@ShowSubItemPopup"
-         IsOpenChanged="OnSubItemPopupChanged"
-         SelectedItem="@SelectedMenuItem"/>
+             IsOpenChanged="OnSubItemPopupChanged"
+             SelectedItem="@SelectedMenuItem"/>
 
 <!-- Cart Component -->
 <MenuCart IsOpen="@CartState.IsCartOpen"
@@ -141,12 +143,21 @@
                 OnTableSelected="HandleTableSelected"
                 OutletId="@OutletId" />
 
-<Stword IsStewordOpen="@ShowStwordPopup" />
-    
+<!-- Steword Component -->
+<Steword IsOpen="@ShowStewardPopup"
+         IsOpenChanged="@((val) => ShowStewardPopup = val)"
+         OnStewardSelected="HandleStewardSelected" />
+
+<!-- Covor Component -->
+<Covor IsOpen="@ShowCovorPopup"
+       IsOpenChanged="@((val) => ShowCovorPopup = val)"
+       Quantity="SelectedCovor"
+       OnCoverConfirmed="HandleCovorConfirmed" />
 
 @code {
     private bool ShowSubItemPopup = false;
     private MenuItem? SelectedMenuItem;
+    private string? RmsCovkot { get; set; }
 
     private void OpenSubItemPopup(MenuItem item)
     {
@@ -159,6 +170,24 @@
         ShowSubItemPopup = value;
         if (!value)
             SelectedMenuItem = null;
+    }
+
+    private short SelectedCovor { get; set; }
+
+    private void HandleCovorConfirmed(short quantity)
+    {
+        SelectedCovor = quantity;
+        Console.WriteLine($"Quantity Selected: {quantity}");
+    }
+
+    private void HandleStewardSelected(StewardModel? steward)
+    {
+        SelectedSteward = steward;
+        if (RmsCovkot == "y" && SelectedCovor == 0)
+        {
+            ShowCovorPopup = true;
+        }
+        Console.WriteLine($"Steward selected: {steward?.EmpName}");
     }
 }
 
@@ -178,9 +207,11 @@
     private string ActiveCategory { get; set; } = "";
     private string SearchTerm { get; set; } = "";
     private bool ShowTablePopup = false;
-    private bool ShowStwordPopup = false;
+    private bool ShowStewardPopup = false;
+    private bool ShowCovorPopup = false;
     private PfbRmscMst? SelectedTable { get; set; }
     private float Total => CartState.CartItems.Sum(x => x.Price * x.Qty);
+    private StewardModel? SelectedSteward { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -343,6 +374,7 @@
     }
 
     private void OnTablePopupChanged(bool value) => ShowTablePopup = value;
+    // private void OnStewardPopupChanged(bool value) => ShowStwordPopup = value;
 
     private async void HandleTableSelected(PfbRmscMst table)
     {
@@ -414,6 +446,7 @@
         {
             var rmsStwkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsStwkot");
             var rmsCovkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsCovkot");
+            RmsCovkot = rmsCovkot;
             if (CartState.CartItems == null || !CartState.CartItems.Any())
             {
                 await JS.InvokeVoidAsync("alert", "Your cart is empty!");
@@ -425,18 +458,16 @@
                 ShowTablePopup = true;
                 return;
             }
-            if (rmsStwkot == "y" && rmsCovkot == "n")
+            if (rmsStwkot == "y" && SelectedSteward == null)
             {
-                ShowStwordPopup = true;
+                ShowStewardPopup = true;
                 return;
-            }
-            else if (rmsStwkot == "n" && rmsCovkot == "y")
-            {
 
             }
-            else if (rmsStwkot == "y" && rmsCovkot == "y")
+            else if (rmsCovkot == "y" && SelectedCovor == 0)
             {
-                
+                ShowCovorPopup = true;
+                return;
             }
             var order = new OrderItem
             {
@@ -448,6 +479,9 @@
                 TotalAmount = CartState.CartItems.Sum(x => x.Price * x.Qty) +
                               CartState.CartItems.SelectMany(x => x.CartSubItem).Sum(x => x.SubItemRates ?? 0),
                 Date = DateTime.Now,
+                ItemQty = CartState.CartItems.FirstOrDefault()?.Qty.ToString() ?? "0",
+                Covor = SelectedCovor > 0 ? SelectedCovor : null,
+                StewardEmpId = SelectedSteward?.EmpCode,
                 CartItem = CartState.CartItems.Select(ci => new CartItems
                 {
                     ItemName = ci.Name,
@@ -484,6 +518,8 @@
                 await JS.InvokeVoidAsync("alert", $"Order #{order.OrderNumber} placed successfully!");
                 CartState.ClearCart();
                 SelectedTable = null;
+                SelectedSteward = null;
+                SelectedCovor = 0;
             }
             else
             {
