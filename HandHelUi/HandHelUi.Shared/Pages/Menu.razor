@@ -479,7 +479,8 @@
                 TotalAmount = CartState.CartItems.Sum(x => x.Price * x.Qty) +
                               CartState.CartItems.SelectMany(x => x.CartSubItem).Sum(x => x.SubItemRates ?? 0),
                 Date = DateTime.Now,
-                ItemQty = CartState.CartItems.FirstOrDefault()?.Qty.ToString() ?? "0",
+                OrderStatus = "K",
+                TotalItems = CartState.CartItems.Count().ToString(),
                 Covor = SelectedCovor > 0 ? SelectedCovor : null,
                 StewardEmpId = SelectedSteward?.EmpCode,
                 CartItem = CartState.CartItems.Select(ci => new CartItems

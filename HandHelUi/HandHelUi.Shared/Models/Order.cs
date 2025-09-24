@@ -25,7 +25,7 @@ namespace HandHelUi.Shared.Models
         public string? RSUM_BIL { get; set; }
         public short? Covor { get; set; }
         public string? RSUM_NAR { get; set; }
-        public string? ItemQty { get; set; }          
+        public string? TotalItems { get; set; }          
         public string? RSUM_KOT { get; set; }
         public string? RSUM_CshC { get; set; }
         public string? RSUM_CSH { get; set; }
