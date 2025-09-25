@@ -23,7 +23,7 @@
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
 
-    [Parameter] public short Quantity { get; set; } = 0; 
+    [Parameter] public short Quantity { get; set; } 
     [Parameter] public EventCallback<short> OnCoverConfirmed { get; set; }
 
     private async Task ConfirmCovor()

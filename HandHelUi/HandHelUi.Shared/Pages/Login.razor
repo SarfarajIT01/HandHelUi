@@ -139,9 +139,11 @@
                     await JS.InvokeVoidAsync("localStorage.setItem", "rmsStwkot", rmsStwkot);
                     await JS.InvokeVoidAsync("localStorage.setItem", "rmsCovkot", rmsCovkot);
 
+                    // var userId = await response.Content.ReadAsStringAsync();
                     var userId = await response.Content.ReadAsStringAsync();
                     using var docUser = JsonDocument.Parse(userId);
-                    UserState.UserId = docUser.RootElement.GetProperty("userId").GetString();
+                    // UserState.UserId = docUser.RootElement.GetProperty("userId").GetString();
+                    UserState.UserId = docUser.RootElement.GetProperty("userFirstName").GetString();
 
                     _isLoading = false;
                     StateHasChanged();

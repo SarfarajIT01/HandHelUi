@@ -7,6 +7,7 @@
 @inject UserState UserState
 @inject CartState CartState
 @using HandHeldUi.Shared.Services
+@using System.Text.Json
 @using static HandHelUi.Shared.Pages.Components.Steword
 
 <div class="min-vh-100 pb-3">
@@ -172,23 +173,100 @@
             SelectedMenuItem = null;
     }
 
-    private short SelectedCovor { get; set; }
+    private short SelectedCovor { get; set; } = 1;
 
-    private void HandleCovorConfirmed(short quantity)
-    {
-        SelectedCovor = quantity;
-        Console.WriteLine($"Quantity Selected: {quantity}");
-    }
+    // private void HandleCovorConfirmed(short quantity)
+    // {
+    //     SelectedCovor = quantity;
+    //     Console.WriteLine($"Quantity Selected: {quantity}");
+    // }
 
-    private void HandleStewardSelected(StewardModel? steward)
+    // private void HandleStewardSelected(StewardModel? steward)
+    // {
+    //     SelectedSteward = steward;
+
+    //     if (RmsCovkot == "y" && SelectedCovor == 1 && SelectedTable?.RmscTblsts != "K")
+    //     {
+    //         ShowCovorPopup = true;
+    //     }
+    //     Console.WriteLine($"Steward selected: {steward?.EmpName}");
+    // }
+
+    private async void HandleStewardSelected(StewardModel? steward)
     {
         SelectedSteward = steward;
-        if (RmsCovkot == "y" && SelectedCovor == 0)
+
+        if (RmsCovkot == "y" && SelectedCovor == 1 && SelectedTable?.RmscTblsts != "K")
         {
             ShowCovorPopup = true;
         }
+
+        await SaveSelectionToLocalStorage();
         Console.WriteLine($"Steward selected: {steward?.EmpName}");
     }
+
+    private async void HandleCovorConfirmed(short quantity)
+    {
+        SelectedCovor = quantity;
+        Console.WriteLine($"Quantity Selected: {quantity}");
+
+        await SaveSelectionToLocalStorage();
+    }
+
+    private async Task SaveSelectionToLocalStorage()
+    {
+        // पुराना data निकाल लो
+        var selectionJson = await JS.InvokeAsync<string>("localStorage.getItem", "tableStewardSelectionList");
+        var selectionList = string.IsNullOrEmpty(selectionJson)
+            ? new Dictionary<string, TableStewardSelection>()
+            : JsonSerializer.Deserialize<Dictionary<string, TableStewardSelection>>(selectionJson);
+
+        if (SelectedTable != null)
+        {
+            var tableCode = SelectedTable.RmscCod;
+            selectionList[tableCode] = new TableStewardSelection
+            {
+                TableCode = tableCode,
+                SelectedSteward = SelectedSteward,
+                SelectedTable = SelectedTable,
+                SelectedCovor = SelectedCovor
+            };
+        }
+
+        var updatedJson = JsonSerializer.Serialize(selectionList);
+        await JS.InvokeVoidAsync("localStorage.setItem", "tableStewardSelectionList", updatedJson);
+    }
+
+
+    // private async Task SaveSelectionToLocalStorage()
+    // {
+    //     var selection = new TableStewardSelection
+    //     {
+    //         SelectedSteward = SelectedSteward,
+    //         SelectedTable = SelectedTable,
+    //         SelectedCovor = SelectedCovor
+    //     };
+
+    //     var selectionJson = JsonSerializer.Serialize(selection);
+    //     await JS.InvokeVoidAsync("localStorage.setItem", "tableStewardSelection", selectionJson);
+    // }
+
+    public class TableStewardSelection
+    {
+        public string? TableCode { get; set; }   // unique key
+        public StewardModel? SelectedSteward { get; set; }
+        public PfbRmscMst? SelectedTable { get; set; }
+        public short SelectedCovor { get; set; }
+    }
+
+
+    // public class TableStewardSelection
+    // {
+    //     public StewardModel? SelectedSteward { get; set; }
+    //     public PfbRmscMst? SelectedTable { get; set; }
+    //     public short SelectedCovor { get; set; } 
+    // }
+
 }
 
 @code {
@@ -376,13 +454,82 @@
     private void OnTablePopupChanged(bool value) => ShowTablePopup = value;
     // private void OnStewardPopupChanged(bool value) => ShowStwordPopup = value;
 
+
     private async void HandleTableSelected(PfbRmscMst table)
     {
+        var selectionJson = await JS.InvokeAsync<string>("localStorage.getItem", "tableStewardSelectionList");
+        var selectionList = string.IsNullOrEmpty(selectionJson)
+            ? new Dictionary<string, TableStewardSelection>()
+            : JsonSerializer.Deserialize<Dictionary<string, TableStewardSelection>>(selectionJson);
+
+        var rmsStwkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsStwkot");
+        var rmsCovkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsCovkot");
+        RmsCovkot = rmsCovkot;
+
         if (table != null)
         {
             SelectedTable = table;
+            var tableCode = table.RmscCod;
+
+            if (selectionList.ContainsKey(tableCode))
+            {
+                // 🔹 Agar ye table pehle se localStorage me hai → directly assign
+                var savedSelection = selectionList[tableCode];
+                SelectedSteward = savedSelection.SelectedSteward;
+                SelectedTable = savedSelection.SelectedTable;
+                SelectedCovor = savedSelection.SelectedCovor;
+            }
+            else
+            {
+                // 🔹 Agar localStorage me nahi hai → popup dikhao
+                if (rmsStwkot == "y" && SelectedSteward == null && SelectedTable?.RmscTblsts != "K")
+                {
+                    ShowStewardPopup = true;
+                    StateHasChanged();
+                    return;
+                }
+                else if (rmsCovkot == "y" && SelectedCovor == 1 && SelectedTable?.RmscTblsts != "K")
+                {
+                    ShowCovorPopup = true;
+                    StateHasChanged();
+                    return;
+                }
+            }
         }
     }
+
+
+
+    // private async void HandleTableSelected(PfbRmscMst table)
+    // {
+    //     var selectionJson = await JS.InvokeAsync<string>("localStorage.getItem", "tableStewardSelection");
+    //     var selection = JsonSerializer.Deserialize<TableStewardSelection>(selectionJson);
+    //     var rmsStwkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsStwkot");
+    //     var rmsCovkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsCovkot");
+    //     RmsCovkot = rmsCovkot;
+    //     if (table != null && (table.RmscCod != selection?.SelectedTable?.RmscCod || table.RmscTblsts != "K"))
+    //     {
+    //         SelectedTable = table;
+    //         if (rmsStwkot == "y" && SelectedSteward == null && SelectedTable?.RmscTblsts != "K")
+    //         {
+    //             ShowStewardPopup = true;
+    //             StateHasChanged();
+    //             return;
+    //         }
+    //         else if (rmsCovkot == "y" && SelectedCovor == 1 && SelectedTable?.RmscTblsts != "K")
+    //         {
+    //             ShowCovorPopup = true;
+    //             StateHasChanged();
+    //             return;
+    //         }
+    //     }
+    //     else
+    //     {
+    //         SelectedSteward = selection?.SelectedSteward;
+    //         SelectedTable = selection?.SelectedTable;
+    //         SelectedCovor = selection.SelectedCovor;
+    //     }
+    // }
 
     private async void HandleToggleCart()
     {
@@ -458,17 +605,43 @@
                 ShowTablePopup = true;
                 return;
             }
-            if (rmsStwkot == "y" && SelectedSteward == null)
+            if (rmsStwkot == "y" && SelectedSteward == null && SelectedTable?.RmscTblsts != "K")
             {
                 ShowStewardPopup = true;
                 return;
 
             }
-            else if (rmsCovkot == "y" && SelectedCovor == 0)
+            else if (rmsCovkot == "y" && SelectedCovor == 1 && SelectedTable?.RmscTblsts != "K")
             {
                 ShowCovorPopup = true;
                 return;
             }
+
+            ////////////////////////////////////////////////////////////////////
+           
+            // var selectionJson = await JS.InvokeAsync<string>("localStorage.getItem", "tableStewardSelection");
+
+            // if (!string.IsNullOrEmpty(selectionJson))
+            // {
+            //     try
+            //     {
+            //         var selection = JsonSerializer.Deserialize<TableStewardSelection>(selectionJson);
+
+            //         if (selection != null)
+            //         {
+            //             SelectedSteward = selection.SelectedSteward;
+            //             SelectedTable = selection.SelectedTable;
+            //             SelectedCovor = selection.SelectedCovor;
+            //         }
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         Console.WriteLine($"Error deserializing localStorage: {ex.Message}");
+            //     }
+            // }
+
+            ///////////////////////////////////////////////////////////////////
+
             var order = new OrderItem
             {
                 OrderNumber = GenerateOrderNumber(),
@@ -481,7 +654,7 @@
                 Date = DateTime.Now,
                 OrderStatus = "K",
                 TotalItems = CartState.CartItems.Count().ToString(),
-                Covor = SelectedCovor > 0 ? SelectedCovor : null,
+                Covor = SelectedCovor > 0 ? SelectedCovor : (short)1,
                 StewardEmpId = SelectedSteward?.EmpCode,
                 CartItem = CartState.CartItems.Select(ci => new CartItems
                 {
@@ -518,9 +691,11 @@
                 var responseContent = await response.Content.ReadAsStringAsync();
                 await JS.InvokeVoidAsync("alert", $"Order #{order.OrderNumber} placed successfully!");
                 CartState.ClearCart();
-                SelectedTable = null;
-                SelectedSteward = null;
-                SelectedCovor = 0;
+                // SelectedTable = null;
+                // SelectedSteward = null;
+                // SelectedCovor = 1;
+                Navigation.NavigateTo($"/menu/{OutletId}", forceLoad: true);
+                // Navigation.NavigateTo($"/menu/{OutletId}?refresh={Guid.NewGuid()}");
             }
             else
             {
