@@ -192,7 +192,7 @@
     //     Console.WriteLine($"Steward selected: {steward?.EmpName}");
     // }
 
-    private async void HandleStewardSelected(StewardModel? steward)
+    private void HandleStewardSelected(StewardModel? steward)
     {
         SelectedSteward = steward;
 
@@ -201,21 +201,21 @@
             ShowCovorPopup = true;
         }
 
-        await SaveSelectionToLocalStorage();
+        // await SaveSelectionToLocalStorage();
         Console.WriteLine($"Steward selected: {steward?.EmpName}");
     }
 
-    private async void HandleCovorConfirmed(short quantity)
+    private void HandleCovorConfirmed(short quantity)
     {
         SelectedCovor = quantity;
         Console.WriteLine($"Quantity Selected: {quantity}");
 
-        await SaveSelectionToLocalStorage();
+        // await SaveSelectionToLocalStorage();
     }
 
     private async Task SaveSelectionToLocalStorage()
     {
-        // पुराना data निकाल लो
+        // fetch old data 
         var selectionJson = await JS.InvokeAsync<string>("localStorage.getItem", "tableStewardSelectionList");
         var selectionList = string.IsNullOrEmpty(selectionJson)
             ? new Dictionary<string, TableStewardSelection>()
@@ -617,31 +617,6 @@
                 return;
             }
 
-            ////////////////////////////////////////////////////////////////////
-           
-            // var selectionJson = await JS.InvokeAsync<string>("localStorage.getItem", "tableStewardSelection");
-
-            // if (!string.IsNullOrEmpty(selectionJson))
-            // {
-            //     try
-            //     {
-            //         var selection = JsonSerializer.Deserialize<TableStewardSelection>(selectionJson);
-
-            //         if (selection != null)
-            //         {
-            //             SelectedSteward = selection.SelectedSteward;
-            //             SelectedTable = selection.SelectedTable;
-            //             SelectedCovor = selection.SelectedCovor;
-            //         }
-            //     }
-            //     catch (Exception ex)
-            //     {
-            //         Console.WriteLine($"Error deserializing localStorage: {ex.Message}");
-            //     }
-            // }
-
-            ///////////////////////////////////////////////////////////////////
-
             var order = new OrderItem
             {
                 OrderNumber = GenerateOrderNumber(),
@@ -690,6 +665,7 @@
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
                 await JS.InvokeVoidAsync("alert", $"Order #{order.OrderNumber} placed successfully!");
+                await SaveSelectionToLocalStorage();
                 CartState.ClearCart();
                 // SelectedTable = null;
                 // SelectedSteward = null;

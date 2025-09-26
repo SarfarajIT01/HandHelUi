@@ -1,0 +1,351 @@
+﻿@page "/quickactions"
+
+
+@if (IsOpen)
+{
+    <div class="qa-modal-overlay">
+        <div class="qa-modal-content" @onclick:stopPropagation>
+
+            <div class="qa-modal-header">
+                <h4 class="qa-title-main">Quick Actions</h4>
+            </div>
+
+            <div class="qa-grid">
+                <div class="qa-card" @onclick='() => OnAction("Order Modify")'>
+                    <div class="qa-icon-circle" style="background:#E3F2FD; color:#1565C0">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div class="qa-title">Order Modify</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Cancel Order")'>
+                    <div class="qa-icon-circle" style="background:#FFEBEE; color:#C62828">
+                        <i class="fa-solid fa-xmark"></i>
+                    </div>
+                    <div class="qa-title">Cancel Order</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Order Split")'>
+                    <div class="qa-icon-circle" style="background:#FFF3E0; color:#EF6C00">
+                        <i class="fa-solid fa-scissors"></i>
+                    </div>
+                    <div class="qa-title">Order Split</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Bill Generate")'>
+                    <div class="qa-icon-circle" style="background:#E8F5E9; color:#2E7D32">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="qa-title">Bill Generate</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Bill Modify")'>
+                    <div class="qa-icon-circle" style="background:#E1F5FE; color:#0277BD">
+                        <i class="fa-solid fa-file-pen"></i>
+                    </div>
+                    <div class="qa-title">Bill Modify</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Bill Cancel")'>
+                    <div class="qa-icon-circle" style="background:#FFEBEE; color:#B71C1C">
+                        <i class="fa-solid fa-ban"></i>
+                    </div>
+                    <div class="qa-title">Bill Cancel</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Order Reprint")'>
+                    <div class="qa-icon-circle" style="background:#F3E5F5; color:#6A1B9A">
+                        <i class="fa-solid fa-print"></i>
+                    </div>
+                    <div class="qa-title">Order Reprint</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Bill Reprint")'>
+                    <div class="qa-icon-circle" style="background:#F1F8E9; color:#558B2F">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+                    <div class="qa-title">Bill Reprint</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Table Transfer")'>
+                    <div class="qa-icon-circle" style="background:#FFFDE7; color:#F9A825">
+                        <i class="fa-solid fa-people-arrows"></i>
+                    </div>
+                    <div class="qa-title">Table Transfer</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Undo Bill")'>
+                    <div class="qa-icon-circle" style="background:#ECEFF1; color:#455A64">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </div>
+                    <div class="qa-title">Undo Bill</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction("Kitchen Order")'>
+                    <div class="qa-icon-circle" style="background:#EDE7F6; color:#4527A0">
+                        <i class="fa-solid fa-utensils"></i>
+                    </div>
+                    <div class="qa-title">Kitchen Order</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction(" Bill Settlement")'>
+                    <div class="qa-icon-circle" style="background:#E0F7FA; color:#006064">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                    </div>
+                    <div class="qa-title">Bill Settlement</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction(" Table Instruction")'>
+                    <div class="qa-icon-circle" style="background:#FFFDE7; color:#F9A825">
+                        <i class="fa-solid fa-table"></i>
+                    </div>
+                    <div class="qa-title">Table Instruction</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction(" Bill Split")'>
+                    <div class="qa-icon-circle" style="background:#FFF3E0; color:#EF6C00">
+                        <i class="fa-solid fa-columns"></i>
+                    </div>
+                    <div class="qa-title">Bill Split</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction(" Bill Merge")'>
+                    <div class="qa-icon-circle" style="background:#E8F5E9; color:#2E7D32">
+                        <i class="fa-solid fa-compress"></i>
+                    </div>
+                    <div class="qa-title">Bill Merge</div>
+                </div>
+
+                <div class="qa-card" @onclick='() => OnAction(" Card Options")'>
+                    <div class="qa-icon-circle" style="background:#EDE7F6; color:#4527A0">
+                        <i class="fa-solid fa-credit-card"></i>
+                    </div>
+                    <div class="qa-title">Card Options</div>
+                </div>
+            </div>
+
+            <div class="qa-modal-footer">
+                <button class="btn-back" @onclick="ClosePopup">BACK</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private void ClosePopup()
+    {
+        IsOpen = false;
+        IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    private void OnAction(string action)
+    {
+        Console.WriteLine($"Action: {action}");
+        ClosePopup();
+    }
+}
+
+
+<style>
+    /* Overlay */
+    .qa-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+    }
+
+    /* Popup */
+    .qa-modal-content {
+        background: #fff;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 600px;
+        max-width: 710px;
+        padding: 12px;
+        animation: fadeIn 0.3s ease-in-out;
+        display: flex;
+        flex-direction: column;
+
+    }
+
+    /* Modal Header */
+    .qa-modal-header {
+        display: flex;
+        justify-content: center; /* Center alignment */
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+
+    /* Heading */
+    .qa-title-main {
+        margin: 0;
+        font-size: 1.5rem; /* Bigger text */
+        font-weight: 700; /* Bold */
+        color: #222;
+        text-align: center;
+    }
+        .qa-modal-header h5 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #222;
+        }
+
+    /* Grid */
+    .qa-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 14px;
+        /* max-height: 360px; */
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 10px;
+    }
+
+        .qa-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .qa-grid::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 10px;
+        }
+
+    /* Cards */
+    /* .qa-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 18px 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    } */
+
+        /* .qa-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+        } */
+
+    /* } */
+
+    /* Icon circle */
+    /* .qa-icon-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 20px;
+        margin-bottom: 10px;
+    } */
+
+    /* Title */
+    .qa-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #333;
+    }
+
+    /* Footer */
+    .qa-modal-footer {
+        text-align: center;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-back {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: #fff;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /* Cards */
+    .qa-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 18px 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.25s ease-in-out;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        border: 1px ridge;
+        /* --bs-card-border-width: var(--bs-border-width); */
+    }
+
+        .qa-card:hover {
+            transform: translateY(-6px) scale(1.05); /* smooth lift + zoom */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+        }
+
+        /* Hover glow border */
+        .qa-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            border: 2px solid transparent;
+            transition: all 0.25s ease-in-out;
+        }
+
+        .qa-card:hover::after {
+            border-color: rgba(255, 75, 43, 0.6); /* theme glow */
+            box-shadow: 0 0 12px rgba(255, 75, 43, 0.4);
+        }
+
+    /* Icon circle */
+    .qa-icon-circle {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 22px;
+        margin-bottom: 10px;
+        transition: background 0.25s ease-in-out, transform 0.25s ease-in-out;
+    }
+
+    /* Icon hover effect */
+    .qa-card:hover .qa-icon-circle {
+        transform: rotate(8deg) scale(1.1);
+        filter: brightness(1.1); /* thoda bright ho jaye */
+    }
+
+</style>
