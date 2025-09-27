@@ -10,7 +10,12 @@
             <li class="nav-item">
                 <button class="nav-link" @onclick="OnTableClick">
                     <i class="bi bi-binoculars"></i>
-                    <span class="nav-text">Table No</span>
+                    <span class="nav-text">Table No
+                        @if (tableNo !=null)
+                        {
+                            @tableNo
+                        }
+                    </span>
                 </button>
             </li>
             <li class="nav-item">
@@ -58,6 +63,7 @@
 @code {
     bool IsActive = true;
     [Parameter] public int CartCount { get; set; } = 0;
+    [Parameter] public string? tableNo { get; set; }
     [Parameter] public EventCallback OnHomeClick { get; set; }
     [Parameter] public EventCallback OnTableClick { get; set; }
     [Parameter] public EventCallback OnOrderTypeClick { get; set; }

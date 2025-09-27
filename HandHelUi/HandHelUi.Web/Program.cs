@@ -27,6 +27,8 @@ builder.Services.AddSingleton<UserState>();
 // Register CartState service
 builder.Services.AddScoped<CartState>();
 
+builder.Services.AddScoped<TableSelectionService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -1,10 +1,12 @@
 ﻿@using HandHelUi.Shared.Models
 @using HandHelUi.Shared.Pages.Components
+@using HandHelUi.Shared.Services
 @using HandHeldUi.Shared.Services
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject CartState CartState
+@inject TableSelectionService TableSelectionService
 
 <link href="_content/HandHelUi.Shared/css/mainlayout.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -27,12 +29,6 @@
         </div>
     </main>
 
-       <!-- Table Popup component goes here -->
-    <TableSelection OutletId="@outletId"
-                    IsOpen="@ShowTablePopup"
-                    IsOpenChanged="OnTablePopupChanged"
-                    OnTableSelected="HandleTableSelected" />
-
 
     <!-- Table Popup component goes here -->
     <QuickActions IsOpen="@ShowQuickAction"
@@ -40,6 +36,7 @@
 
 
     <Footer CartCount="@cartCount"
+            tableNo="@SelectedTable?.RmscCod"
             OnHomeClick="HomePage"
             OnTableClick="LoadTableData"
             OnOrderTypeClick="ShowOrderTypeModal"
@@ -56,13 +53,14 @@
     private string restaurantName = "Restaurant Name";
     private string ipAddress = "192.168.1.1";
     private int cartCount = 0;
+    private string? tableNo;
     private string searchTerm = "";
     private string outletId = "";
     private string posCode = "";
     private bool _isInitialized = false;
-    private bool ShowTablePopup = false;
+    // private bool ShowTablePopup = false;
     private bool ShowQuickAction = false;
-    public PfbRmscMst? SelectedTable { get; set; }
+    [Parameter] public PfbRmscMst? SelectedTable { get; set; }
 
 
     protected override async Task OnInitializedAsync()
@@ -113,27 +111,10 @@
         Navigation.NavigateTo($"/menu/{outletId}?posCode={posCode}");
     }
 
-    private void LoadTableData()
-    {
-        ShowTablePopup = true;
-    }
+   
 
-    // private async void HandleTableSelected(PfbRmscMst table)
-    // {
-    //     if (table != null)
-    //     {
-    //         SelectedTable = table;
-    //     }
-    // }
-    [Parameter] public EventCallback<PfbRmscMst> OnTableSelected { get; set; }
 
-    private async Task HandleTableSelected(PfbRmscMst table)
-    {
-        await OnTableSelected.InvokeAsync(table);
-        // ClosePopup();
-    }
-
-    private void OnTablePopupChanged(bool value) => ShowTablePopup = value;
+    // private void OnTablePopupChanged(bool value) => ShowTablePopup = value;
     private void OnActionPopupChanged(bool value) => ShowQuickAction = value;
 
 
@@ -152,10 +133,23 @@
         // Show cover modal logic
     }
 
+    private void LoadTableData()
+    {
+        TableSelectionService.TriggerTableSelected();
+    }
+
+    // private void GetTableNo()
+    // {
+    //     tableNo = TableSelectionService?.SelectedTable?.RmscCod;
+
+    // }
+
     private void ShowCart()
     {
         CartState.TriggerToggleCart();
     }
+
+    
 
     private void UpdateCartCount()
     {
