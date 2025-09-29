@@ -131,7 +131,7 @@
     </div>
 }
 
-@code {
+@* @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
 
@@ -143,7 +143,26 @@
 
     private void OnAction(string action)
     {
+
         Console.WriteLine($"Action: {action}");
+        ClosePopup();
+    }
+} *@
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<string> OnActionSelected { get; set; } // NEW: Callback for selected action
+
+    private void ClosePopup()
+    {
+        IsOpen = false;
+        IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    private async Task OnAction(string action) // CHANGED: Now async, invokes callback
+    {
+        await OnActionSelected.InvokeAsync(action); // Notify parent of the action
         ClosePopup();
     }
 }

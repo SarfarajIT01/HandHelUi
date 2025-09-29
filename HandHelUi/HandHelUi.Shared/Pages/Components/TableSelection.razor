@@ -51,6 +51,7 @@
 
 @code {
     [Parameter] public string? OutletId { get; set; }
+    [Parameter] public string? BillGenrate { get; set; }
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public EventCallback<PfbRmscMst> OnTableSelected { get; set; }
@@ -66,13 +67,23 @@
 
             var response = await Http.GetFromJsonAsync<List<PfbRmscMst>>("api/CSATSU_RMS_TableStatus");
 
-            if (response != null)
+            if (response != null && BillGenrate != "BillGen")
             {
                 var CurrentHotelTable = response
                     .Where(t => t.OutletId == OutletId)
                     .Distinct()
                     .OrderBy(t => t.RmscCod)
                     .ToList();
+
+                Tables = CurrentHotelTable;
+            }
+            else if (BillGenrate == "BillGen")
+            {
+                var CurrentHotelTable = response
+                   .Where(t => t.OutletId == OutletId && t.RmscTblsts =="K")
+                   .Distinct()
+                   .OrderBy(t => t.RmscCod)
+                   .ToList();
 
                 Tables = CurrentHotelTable;
             }
