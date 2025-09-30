@@ -289,14 +289,20 @@
 
     private void OnTableSelectionChanged(bool value) => ShowTableSelection = value; // NEW: Handle TableSelection close
 
-    private async Task HandleTableSelected(PfbRmscMst selectedTable) // NEW: Handle selected table (expand as needed)
-    {
-        Console.WriteLine($"Selected table for bill: {selectedTable.RmscCod}");
-        // Add your bill generation logic here, e.g., API call or update state
-        // Example: tableNo = selectedTable.RmscCod;
-        // TableSelectionService.SelectedTable = selectedTable; // If using the service
-        ShowTableSelection = false; // Close after selection
-    }
+
+@using System.Text.Json
+
+private async Task HandleTableSelected(PfbRmscMst selectedTable) // NEW: Handle selected table
+{
+    // Serialize the selectedTable object to JSON
+    string selectedTableJson = JsonSerializer.Serialize(selectedTable);
+    // Encode the JSON string to make it URL-safe
+    string encodedJson = Uri.EscapeDataString(selectedTableJson);
+    // Navigate to the bill page with the JSON data
+    Navigation.NavigateTo($"/bill?tableData={encodedJson}");
+    // Close the TableSelection popup
+    ShowTableSelection = false;
+}
 
     private void ShowOrderTypeModal()
     {

@@ -1,16 +1,23 @@
-﻿
-@page "/bill"
+﻿@page "/bill"
+@using HandHelUi.Shared.Models
+@using Microsoft.AspNetCore.Components
+@using System.Text.Json
+@inject NavigationManager Navigation
+@inject HttpClient Http
 
 <div class="bill-page">
     <!-- Header -->
     <div class="bill-header">
-        <div><strong>Bill No:</strong> B597037</div>
-        <div><strong>Time:</strong> 14:54</div>
-        <div><strong>Table No:</strong> 001</div>
-        <div><strong>Stw:</strong> 27</div>
-        <div><strong>Total Qty:</strong> 2</div>
-        <div><strong>Cvr:</strong> 1</div>
-        <div><strong>User:</strong> a</div>
+        @if (SelectedTable !=null)
+        {
+            <div><strong>Bill No:</strong> B597037</div>
+            <div><strong>Time:</strong> </div>
+            <div><strong>Table No:</strong> @SelectedTable.RmscCod</div>
+            <div><strong>Stw:</strong> @SelectedTable.RunSTW</div>
+            <div><strong>Total Qty:</strong> 2</div>
+            <div><strong>Cvr:</strong> @SelectedTable.RunCvr</div>
+            <div><strong>User:</strong> @SelectedTable.RunGuestCode</div>
+        }
     </div>
 
     <!-- Orders Table -->
@@ -91,6 +98,28 @@
         <button class="primary-btn">Generate Bill</button>
     </div>
 </div>
+
+@code {
+    private PfbRmscMst SelectedTable { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Get tableData from query string
+        var uri = new Uri(Navigation.Uri);
+        var queryParameters = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        string tableDataJson = queryParameters["tableData"];
+        if (!string.IsNullOrEmpty(tableDataJson))
+        {
+            // Decode and deserialize the JSON string
+            string decodedJson = Uri.UnescapeDataString(tableDataJson);
+            SelectedTable = JsonSerializer.Deserialize<PfbRmscMst>(decodedJson);
+        }
+        else
+        {
+            SelectedTable = null; // Or set a default value if needed
+        }
+    }
+}
 
 <style scoped>
     /* Test Charges Section with Grid */
