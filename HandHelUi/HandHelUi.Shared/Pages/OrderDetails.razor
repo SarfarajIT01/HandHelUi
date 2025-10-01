@@ -8,15 +8,15 @@
 <div class="bill-page">
     <!-- Header -->
     <div class="bill-header">
-        @if (SelectedTable !=null)
+        @if (tableDetails != null)
         {
-            <div><strong>Bill No:</strong> B597037</div>
-            <div><strong>Time:</strong> </div>
-            <div><strong>Table No:</strong> @SelectedTable.RmscCod</div>
-            <div><strong>Stw:</strong> @SelectedTable.RunSTW</div>
-            <div><strong>Total Qty:</strong> 2</div>
-            <div><strong>Cvr:</strong> @SelectedTable.RunCvr</div>
-            <div><strong>User:</strong> @SelectedTable.RunGuestCode</div>
+            <div><strong>Bill No:</strong> @tableDetails.NextBill</div>
+            <div><strong>Time:</strong> @tableDetails.RSUM_TIM</div>
+            <div><strong>Table No:</strong> @tableDetails.RSUM_TBL</div>
+            <div><strong>Stw:</strong> @tableDetails.RSUM_STW</div>
+            <div><strong>Total Qty:</strong> @orderData?.Sum(r => r.RkotQty)</div>
+            <div><strong>Cvr:</strong> @tableDetails.RSUM_CVR</div>
+            <div><strong>User:</strong> @tableDetails.RSUM_CSH</div>
         }
     </div>
 
@@ -29,22 +29,19 @@
             <div>Rate</div>
             <div>Amt</div>
         </div>
-
-        <div class="order-row">
-            <div>RG1152840</div>
-            <div>CHICKEN PAKORAS</div>
-            <div>1</div>
-            <div>286</div>
-            <div>286</div>
-        </div>
-
-        <div class="order-row">
-            <div>RG1152840</div>
-            <div>A.F.C FRIED CHICKEN</div>
-            <div>1</div>
-            <div>400</div>
-            <div>400</div>
-        </div>
+        @if (orderData !=null)
+        {
+            @foreach (var item in orderData)
+            {
+                <div class="order-row">
+                    <div>@item.RkotNo</div>
+                    <div>@item.ItemName</div>
+                    <div>@item.RkotQty</div>
+                    <div>@item.RkotRat</div>
+                    <div>@item.FnlBaseVal</div>
+                </div>
+            }
+        }
     </div>
 
 
@@ -71,25 +68,28 @@
         </label>
     </div>
 
-    <!-- Right: Summary -->
-    <div class="charges-summary">
-        <div class="summary-row">
-            <span>SubTotal</span>
-            <span>686</span>
+    @if (orderData !=null)
+    {
+        <!-- Right: Summary -->
+        <div class="charges-summary">
+            <div class="summary-row">
+                <span>SubTotal</span>
+                    <span>@orderData.Sum(t => t.FnlBaseVal)</span>
+            </div>
+            <div class="summary-row">
+                <span>Discount</span>
+                <span>0</span>
+            </div>
+            <div class="summary-row">
+                <span>Tax</span>
+                <span>@orderData.Sum(tax => tax.RkotTax)</span>
+            </div>
+            <div class="summary-row total">
+                <span>Total</span>
+                    <span>@orderData.Sum(tax => tax.RkotTax + tax.FnlBaseVal)</span>
+            </div>
         </div>
-        <div class="summary-row">
-            <span>Discount</span>
-            <span>0</span>
-        </div>
-        <div class="summary-row">
-            <span>Tax</span>
-            <span>34.30</span>
-        </div>
-        <div class="summary-row total">
-            <span>Total</span>
-            <span>720</span>
-        </div>
-    </div>
+    }
 </div>
 
     <!-- Actions -->
@@ -100,24 +100,103 @@
 </div>
 
 @code {
-    private PfbRmscMst SelectedTable { get; set; }
+    private string? tableNumber;
+    private importaintTableDetail? tableDetails;
+    private List<PfbRkotTrnDto>? orderData;
 
-    protected override void OnInitialized()
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? TableNo { get; set; }
+
+    protected override void OnParametersSet()
     {
-        // Get tableData from query string
-        var uri = new Uri(Navigation.Uri);
-        var queryParameters = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        string tableDataJson = queryParameters["tableData"];
-        if (!string.IsNullOrEmpty(tableDataJson))
+        if (!string.IsNullOrEmpty(TableNo))
         {
-            // Decode and deserialize the JSON string
-            string decodedJson = Uri.UnescapeDataString(tableDataJson);
-            SelectedTable = JsonSerializer.Deserialize<PfbRmscMst>(decodedJson);
+            tableDetails = null;
+            orderData = null;
+            tableNumber = TableNo;
+            _ = LoadTableDetails();
+            _ = LoadOrderData();
         }
-        else
+    }
+
+    private async Task LoadTableDetails()
+    {
+        try
         {
-            SelectedTable = null; // Or set a default value if needed
+            tableDetails = null;
+            StateHasChanged();
+
+            var pos = await GetPosCode();
+
+            var response = await Http.GetAsync($"api/ImportaintTableDetails/GetByID/{tableNumber}/{pos}/T");
+
+            if (response.IsSuccessStatusCode)
+            {
+                tableDetails = await response.Content.ReadFromJsonAsync<importaintTableDetail>();
+            }
+            else
+            {
+                // If open table not found, try billed tables
+                // response = await Http.GetAsync($"api/ImportaintTableDetails/GetBillByID/{tableNumber}/{pos}");
+                // if (response.IsSuccessStatusCode)
+                // {
+                //     tableDetails = await response.Content.ReadFromJsonAsync<importaintTableDetail>();
+                // }
+            }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading table details: {ex.Message}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadOrderData()
+    {
+        try
+        {
+            orderData = null;
+            StateHasChanged();
+
+            var pos = await GetPosCode();
+
+            var response = await Http.GetAsync($"api/CSATSU_RMS_GetOrderData/{tableNumber}/{pos}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var newData = await response.Content.ReadFromJsonAsync<List<PfbRkotTrnDto>>();
+
+                if (newData != null)
+                    orderData = newData;
+                else
+                    orderData = new List<PfbRkotTrnDto>(); // ensure it's not null
+            }
+            else
+            {
+                orderData = new List<PfbRkotTrnDto>(); // reset to empty list
+                Console.WriteLine($"API call failed: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            orderData = new List<PfbRkotTrnDto>(); // prevent mixing old data
+            Console.WriteLine($"Error loading order data: {ex.Message}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+
+    private async Task<string> GetPosCode()
+    {
+      
+        return "001"; // Default value
     }
 }
 
