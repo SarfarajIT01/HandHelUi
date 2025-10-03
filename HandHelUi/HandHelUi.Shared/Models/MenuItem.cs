@@ -41,6 +41,7 @@ namespace HandHelUi.Shared.Models
         public float? SubMinQty { get; set; }
         public float? SubMaxQty { get; set; }
         public string? IsAddon { get; set; }
+        public string? SubitemNo { get; set; }
         public string? IsSubitem { get; set; }
     }
 

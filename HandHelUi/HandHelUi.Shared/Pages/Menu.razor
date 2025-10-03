@@ -703,7 +703,9 @@
                     SubItem = ci.CartSubItem.Select(csi => new CartSubItems
                     {
                         SubItemName = csi.SubItemName,
-                        SubItemRates = csi.SubItemRates
+                        SubItemRates = csi.SubItemRates,
+                        SubitemNo = csi.SubitemNo
+
                     }).ToList()
                 }).ToList()
             };

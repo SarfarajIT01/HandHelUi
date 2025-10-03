@@ -24,6 +24,7 @@ namespace HandHelUi.Shared.Models
         public float? SubMinQty { get; set; }
         public string? SubGrpName { get; set; }
         public string? SubItemName { get; set; }
+        public string? SubitemNo { get; set; }
         public float? SubItemRates { get; set; }
     }
 }

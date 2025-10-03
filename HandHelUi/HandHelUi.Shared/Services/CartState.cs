@@ -134,6 +134,7 @@ namespace HandHeldUi.Shared.Services
             // Add subitem
             parentCartItem.CartSubItem.Add(new CartSubItem
             {
+                SubitemNo = subItem.SubitemNo,
                 SubMinQty = subItem.SubMinQty,
                 SubGrpName = subItem.SubGrpName,
                 SubItemName = subItem.SubItemName,
