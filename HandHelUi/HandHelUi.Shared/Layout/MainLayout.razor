@@ -273,7 +273,7 @@
 
     private void HomePage()
     {
-        Navigation.NavigateTo($"/menu/{outletId}?posCode={posCode}");
+        Navigation.NavigateTo($"/menu/{outletId}?posCode={posCode}", forceLoad: true);
     }
 
     private void OnActionPopupChanged(bool value) => ShowQuickAction = value;

@@ -53,7 +53,20 @@
         </div>
     }
     <!-- Cards -->
-    @if (AllMenuItems == null || AllMenuItems.Count == 0)
+    <!-- Loader -->
+    @if (isLoading)
+    {
+        <div class="loader-overlay">
+            @* <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+                <span class="visually-hidden">Loading...</span>
+                
+            </div> *@
+            <div class="loaderrr"></div>
+        </div>
+        
+        
+    }
+    else if (AllMenuItems == null || AllMenuItems.Count == 0)
     {
         <div class="container pt-3">
             <div class="alert alert-warning">No items found for this outlet.</div>
@@ -126,6 +139,38 @@
     }
 </div>
 
+
+<style>
+
+    .loader-overlay {
+        position: fixed;
+        inset: 0; /* top, right, bottom, left = 0 */
+        background: rgba(255, 255, 255, 0.8); /* halka white transparent bg */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        /* z-index: 1050; /* upar rahe sab UI ke */ */
+    }
+
+    .loaderrr {
+        --d: 22px;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        /* color: #25b09b; */
+        color: dodgerblue;
+        box-shadow: calc(1*var(--d)) calc(0*var(--d)) 0 0, calc(0.707*var(--d)) calc(0.707*var(--d)) 0 1px, calc(0*var(--d)) calc(1*var(--d)) 0 2px, calc(-0.707*var(--d)) calc(0.707*var(--d)) 0 3px, calc(-1*var(--d)) calc(0*var(--d)) 0 4px, calc(-0.707*var(--d)) calc(-0.707*var(--d))0 5px, calc(0*var(--d)) calc(-1*var(--d)) 0 6px;
+        animation: l27 1s infinite steps(8);
+    }
+    @@keyframes l27 {
+        100%
+
+    {
+        transform: rotate(1turn)
+    }
+
+    }
+</style>
 <!-- SubItem Component -->
 <MenuSubItem IsOpen="@ShowSubItemPopup"
              IsOpenChanged="OnSubItemPopupChanged"
@@ -272,6 +317,8 @@
 }
 
 @code {
+    private bool isLoading = true; 
+
     [Parameter] public string? OutletId { get; set; }
     [Parameter]
     [SupplyParameterFromQuery]
@@ -295,6 +342,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
+        StateHasChanged();
         if (!string.IsNullOrEmpty(search))
         {
             SearchTerm = search;
@@ -405,6 +454,11 @@
             AllMenuItems = new List<MenuItem>();
             CurrentMenuItems = new List<MenuItem>();
             Console.WriteLine($"Exception while fetching menu items: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
