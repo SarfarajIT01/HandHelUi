@@ -4,6 +4,7 @@
 @using System.Text.Json
 @inject NavigationManager Navigation
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="bill-page">
     <!-- Header -->
@@ -29,7 +30,7 @@
             <div>Rate</div>
             <div>Amt</div>
         </div>
-        @if (orderData !=null)
+        @if (orderData != null)
         {
             @foreach (var item in orderData)
             {
@@ -44,65 +45,93 @@
         }
     </div>
 
-
-
-<!-- Test Charges + Summary -->
-<div class="test-charges">
-    <!-- Left: Test Charge Options -->
-    <div class="charges-left">
-        <label>
-            <input type="checkbox" /> Test Charge 10% (69) = 789
-        </label>
-        <label>
-            <input type="checkbox" /> Test Charge 5% (34) = 754
-        </label>
-        <label>
-            <input type="checkbox" /> Test Charge 7% (48) = 768
-        </label>
-        <label>
-            <input type="checkbox" /> Test Charge 0% (0) = 720
-        </label>
-        <label class="custom-charge">
-            <input type="checkbox" /> Test Charge
-            <input type="number" min="0" value="0" /> % = 720
-        </label>
-    </div>
-
-    @if (orderData !=null)
-    {
-        <!-- Right: Summary -->
-        <div class="charges-summary">
-            <div class="summary-row">
-                <span>SubTotal</span>
-                    <span>@orderData.Sum(t => t.FnlBaseVal)</span>
-            </div>
-            <div class="summary-row">
-                <span>Discount</span>
-                <span>0</span>
-            </div>
-            <div class="summary-row">
-                <span>Tax</span>
-                <span>@orderData.Sum(tax => tax.RkotTax)</span>
-            </div>
-            <div class="summary-row total">
-                <span>Total</span>
-                    <span>@orderData.Sum(tax => tax.RkotTax + tax.FnlBaseVal)</span>
-            </div>
+    <!-- Test Charges + Summary -->
+    <div class="test-charges">
+        <!-- Left: Test Charge Options -->
+        <div class="charges-left">
+            <label><input type="checkbox" /> Test Charge 10%</label>
+            <label><input type="checkbox" /> Test Charge 5%</label>
+            <label><input type="checkbox" /> Test Charge 7%</label>
+            <label><input type="checkbox" /> Test Charge 0%</label>
+            <label class="custom-charge">
+                <input type="checkbox" /> Custom
+                <input type="number" min="0" value="0" /> %
+            </label>
         </div>
-    }
-</div>
+
+        @if (orderData != null)
+        {
+            <!-- Right: Summary -->
+            <div class="charges-summary">
+                <div class="summary-row">
+                    <span>SubTotal</span>
+                    <span>@orderData.Sum(t => t.FnlBaseVal)</span>
+                </div>
+                <div class="summary-row">
+                    <span>Discount</span>
+                    <span>@discount</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax</span>
+                    <span>@orderData.Sum(tax => tax.RkotTax)</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total</span>
+                    <span>@orderData.Sum(tax => tax.RkotTax + tax.FnlBaseVal) - discount</span>
+                </div>
+            </div>
+        }
+    </div>
 
     <!-- Actions -->
     <div class="bill-actions">
         <button class="secondary-btn">Others</button>
-        <button class="primary-btn">Generate Bill</button>
+        <button class="primary-btn" @onclick="() => GenerateBill()">Generate Bill</button>
     </div>
+
+    <!-- Discount Remark Modal -->
+    @if (showDiscountRemark)
+    {
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <h2 class="modal-title">Enter Discount Remark</h2>
+                <input type="text" @bind="discountReason" placeholder="Enter reason..." class="modal-input" />
+
+                <div class="modal-actions">
+                    <button class="btn-cancel" @onclick="CloseDiscountModal">Cancel</button>
+                    <button class="btn-confirm" @onclick="ConfirmDiscount">Confirm</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Confirmation Modal -->
+    @if (showConfirm)
+    {
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <h2 class="modal-title">Generate Bill</h2>
+                <p class="modal-text">Are you sure you want to generate bill?</p>
+
+                <div class="modal-actions">
+                    <button class="btn-cancel" @onclick="() => { showConfirm = false; }">No</button>
+                    <button class="btn-confirm" @onclick="GenBill">Yes</button>
+                </div>
+            </div>
+        </div>
+    }
+
 </div>
 
 @code {
     private string? tableNumber;
     private importaintTableDetail? tableDetails;
     private List<PfbRkotTrnDto>? orderData;
+
+    private bool showDiscountRemark = false;
+    private bool showConfirm = false;
+    private string discountReason = "";
+    private int discount = 0;
 
     [Parameter]
     [SupplyParameterFromQuery]
@@ -124,81 +153,94 @@
     {
         try
         {
-            tableDetails = null;
-            StateHasChanged();
-
             var pos = await GetPosCode();
-
             var response = await Http.GetAsync($"api/ImportaintTableDetails/GetByID/{tableNumber}/{pos}/T");
-
             if (response.IsSuccessStatusCode)
             {
                 tableDetails = await response.Content.ReadFromJsonAsync<importaintTableDetail>();
             }
-            else
-            {
-                // If open table not found, try billed tables
-                // response = await Http.GetAsync($"api/ImportaintTableDetails/GetBillByID/{tableNumber}/{pos}");
-                // if (response.IsSuccessStatusCode)
-                // {
-                //     tableDetails = await response.Content.ReadFromJsonAsync<importaintTableDetail>();
-                // }
-            }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading table details: {ex.Message}");
-        }
-        finally
-        {
-            StateHasChanged();
-        }
+        catch (Exception ex) { Console.WriteLine($"Error loading table details: {ex.Message}"); }
+        finally { StateHasChanged(); }
     }
 
     private async Task LoadOrderData()
     {
         try
         {
-            orderData = null;
-            StateHasChanged();
-
             var pos = await GetPosCode();
-
             var response = await Http.GetAsync($"api/CSATSU_RMS_GetOrderData/{tableNumber}/{pos}");
-
             if (response.IsSuccessStatusCode)
             {
-                var newData = await response.Content.ReadFromJsonAsync<List<PfbRkotTrnDto>>();
+                orderData = await response.Content.ReadFromJsonAsync<List<PfbRkotTrnDto>>() ?? new();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error loading order data: {ex.Message}"); }
+        finally { StateHasChanged(); }
+    }
 
-                if (newData != null)
-                    orderData = newData;
-                else
-                    orderData = new List<PfbRkotTrnDto>(); // ensure it's not null
+    private async Task GenerateBill()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/GetOrderTypeForBillGen/GetById/{tableNumber}");
+            if (!response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "Can't fetch order type");
+                return;
+            }
+
+            var data = await response.Content.ReadFromJsonAsync<List<string>>();
+            if (data != null && data.Count > 0 && data[0] == "COMP")
+            {
+                // COMP flow
+                Navigation.NavigateTo($"/comp?TableNo={tableNumber}");
+                return;
+            }
+
+            // Check discount logic
+            if (/* check your discount condition */ false)
+            {
+                showDiscountRemark = true;
             }
             else
             {
-                orderData = new List<PfbRkotTrnDto>(); // reset to empty list
-                Console.WriteLine($"API call failed: {response.StatusCode}");
+                showConfirm = true;
             }
         }
         catch (Exception ex)
         {
-            orderData = new List<PfbRkotTrnDto>(); // prevent mixing old data
-            Console.WriteLine($"Error loading order data: {ex.Message}");
-        }
-        finally
-        {
-            StateHasChanged();
+            Console.WriteLine($"Error in GenerateBill: {ex.Message}");
         }
     }
 
-
-    private async Task<string> GetPosCode()
+    private void CloseDiscountModal()
     {
-      
-        return "001"; // Default value
+        showDiscountRemark = false;
+        discountReason = "";
     }
+
+    private void ConfirmDiscount()
+    {
+        if (string.IsNullOrWhiteSpace(discountReason))
+        {
+            _ = JS.InvokeVoidAsync("alert", "Discount remark mandatory");
+            return;
+        }
+        showDiscountRemark = false;
+        showConfirm = true;
+    }
+
+    private void GenBill()
+    {
+        showConfirm = false;
+        Console.WriteLine("Bill generation allowed. Proceed with backend API call.");
+        // TODO: Call your bill generation API here
+    }
+
+    private async Task<string> GetPosCode() => "001"; // stub
 }
+
 
 <style scoped>
     /* Test Charges Section with Grid */
@@ -362,6 +404,105 @@
     /* background: #e5e7eb; */
     background: white;
 }
+
+
+    /* Overlay */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    /* Modal Box */
+    .modal-content {
+        background: #fff;
+        border-radius: 14px;
+        padding: 24px 28px;
+        width: 400px;
+        max-width: 90%;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+        animation: fadeInScale 0.25s ease;
+        text-align: center;
+    }
+
+    /* Title & Text */
+    .modal-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 14px;
+        color: #111827;
+    }
+
+    .modal-text {
+        font-size: 15px;
+        color: #4b5563;
+        margin-bottom: 20px;
+    }
+
+    /* Input */
+    .modal-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 18px;
+    }
+
+    /* Actions */
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .btn-cancel, .btn-confirm {
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+        transition: background 0.2s ease;
+    }
+
+    .btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+        .btn-cancel:hover {
+            background: #e5e7eb;
+        }
+
+    .btn-confirm {
+        background: #2563eb;
+        color: white;
+    }
+
+        .btn-confirm:hover {
+            background: #1e4fc3;
+        }
+
+    /* Animation */
+    @@keyframes fadeInScale {
+        from
+
+    {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    }
 </style>
 
 
