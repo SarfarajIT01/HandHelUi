@@ -120,6 +120,19 @@
             </div>
         </div>
     }
+    <!-- bill genrating Modal -->
+    @if (isGenerating)
+    {
+        <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div class="bg-white p-6 rounded-xl shadow-xl text-center">
+                <h3 class="text-lg font-bold">Generating Bill...</h3>
+                <div class="mt-3">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-4 border-blue-600 mx-auto"></div>
+                </div>
+            </div>
+        </div>
+    }
+
 
 </div>
 
@@ -130,6 +143,7 @@
 
     private bool showDiscountRemark = false;
     private bool showConfirm = false;
+    private bool isGenerating = false;
     private string discountReason = "";
     private int discount = 0;
 
@@ -231,12 +245,166 @@
         showConfirm = true;
     }
 
-    private void GenBill()
+    // private async Task GenBill()
+    // {
+    //     try
+    //     {
+    //         isGenerating = true;
+    //         showConfirm = false;
+    //         StateHasChanged();
+
+    //         Step 1: Get Order Details
+    //         var orderResponse = await Http.GetAsync($"api/CSATSU_RMS_RKOT_SUM/{tableNumber}");
+    //         if (!orderResponse.IsSuccessStatusCode)
+    //         {
+    //             var msg = await orderResponse.Content.ReadAsStringAsync();
+    //             await JS.InvokeVoidAsync("alert", msg);
+    //             return;
+    //         }
+
+    //         var orderDetail = await orderResponse.Content.ReadFromJsonAsync<List<PfbRkotSumDto>>();
+    //         var orderDetail = await orderResponse.Content.ReadFromJsonAsync<List<PfbRkotSumDto>>();
+    //         if (orderDetail == null || orderDetail.Count == 0)
+    //         {
+    //             await JS.InvokeVoidAsync("alert", "Bill already generated or no order found.");
+    //             return;
+    //         }
+
+    //         Step 2: Proceed to Generate Bill
+    //         var pos = await GetPosCode();
+    //         var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderDetail);
+
+    //         var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderDetail);
+
+    //         var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderDetail);
+
+    //         if (response.IsSuccessStatusCode)
+    //         {
+    //             var billNo = await response.Content.ReadAsStringAsync();
+    //             await JS.InvokeVoidAsync("alert", $"Bill generated successfully! Bill No: {billNo}");
+    //             Navigation.NavigateTo($"/finalbill?TableNo={tableNumber}");
+    //         }
+    //         else
+    //         {
+    //             await JS.InvokeVoidAsync("alert", "Failed to generate bill.");
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         isGenerating = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
+
+    private async Task GenBill()
     {
-        showConfirm = false;
-        Console.WriteLine("Bill generation allowed. Proceed with backend API call.");
-        // TODO: Call your bill generation API here
+        try
+        {
+            isGenerating = true;
+            showConfirm = false;
+            StateHasChanged();
+
+            // Step 1: Get Order Details (RKOT Summary)
+            var orderResponse = await Http.GetAsync($"api/CSATSU_RMS_RKOT_SUM/{tableNumber}");
+            if (!orderResponse.IsSuccessStatusCode)
+            {
+                var msg = await orderResponse.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", msg);
+                return;
+            }
+
+            var orderDetail = await orderResponse.Content.ReadFromJsonAsync<List<PfbRkotSumDto>>();
+            if (orderDetail == null || orderDetail.Count == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "No order found or bill already generated.");
+                return;
+            }
+
+            // Step 2: Create OrderData (the DTO your API expects)
+            var pos = await GetPosCode();
+
+            var orderData = new OrderDataDto
+            {
+                RBIL_TAXFREE = "n",
+                Tbl = tableNumber,
+                pos = pos,
+                Stw = orderDetail.FirstOrDefault()?.RsumStw ?? "",
+                Amount = (int)orderDetail.Sum(o => o.FnlBaseVal ?? 0),
+                TotalTax = (float)orderDetail.Sum(o => (o.RkotTax ?? 0)),
+                RBIL_TAMT = 0,
+                RBIL_TOTAL = 0,
+                RBIL_STX = 0,
+                RBIL_OTX = 0,
+                RBIL_DC1 = 0,
+                RBIL_CVCHR2 = 0,
+                RBIL_ROUND = 0,
+                RBIL_TaxableDisc = 0,
+                run_date = DateTime.Now.ToString("yyyy-MM-dd"),
+                odrem = "Bill generation from handheld",
+                odtype = "N",
+                G_Code = "G001",
+                G_Name = "Guest",
+                flag = "F",
+                token = "",
+                TaxStructure = new List<TaxStructure>(),
+                TaxStructure2 = new List<TaxStructure2>(),
+                TaxStructureGroupWise = new List<TaxStructureGroupWise>(),
+
+                // Fill item data from RKOT summary
+                RKOT_TRN_DATA = orderDetail.Select(o => new RKOT_TRN_DATA
+                {
+                    RKOT_NO = o.RkotNo ?? "",
+                    ItemCode = o.ItemName ?? "",
+                    DiscountPer = o.RkotDisc?.ToString() ?? "0",
+                    RKOT_SNO = o.RkotSno?.ToString() ?? "0"
+                }).ToList(),
+
+                // Optional blank lists
+                ItemCode = new(),
+                StrQty = new(),
+                ItemRemark = new(),
+                strAddon = new(),
+                strModi = new(),
+                strCombo = new(),
+                strHappy = new(),
+                strdisc = new(),
+                sub_item = new(),
+                cover_item = new(),
+                meal_item = new(),
+            };
+
+            // Step 3: POST to Bill Generator API
+            var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var billNo = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Bill generated successfully! Bill No: {billNo}");
+                Navigation.NavigateTo($"/finalbill?TableNo={tableNumber}");
+            }
+            else
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Failed to generate bill.\n{msg}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
     }
+
+
 
     private async Task<string> GetPosCode() => "001"; // stub
 }
