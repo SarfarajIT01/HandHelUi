@@ -40,7 +40,7 @@ namespace HandHelUi.Shared.Models
         //public List<RMS_RBILL_SUM1> BillData { get; set; }
         //public List<TaxStructure> TaxStructure { get; set; }
         //public List<TaxStructure2> TaxStructure2 { get; set; }
-        //public List<RKOT_TRN_DATA> RKOT_TRN_DATA { get; set; }
+        public List<RKOT_TRN_DATA> RKOT_TRN_DATA { get; set; }
         public string? RBIL_TAXFREE { get; set; }
     }
     public class importaintTableDetail

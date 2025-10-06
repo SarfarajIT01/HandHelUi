@@ -15,7 +15,7 @@
             <div><strong>Time:</strong> @tableDetails.RSUM_TIM</div>
             <div><strong>Table No:</strong> @tableDetails.RSUM_TBL</div>
             <div><strong>Stw:</strong> @tableDetails.RSUM_STW</div>
-            <div><strong>Total Qty:</strong> @orderData?.Sum(r => r.RkotQty)</div>
+            <div><strong>Total Qty:</strong> @itemData?.Sum(r => r.RkotQty)</div>
             <div><strong>Cvr:</strong> @tableDetails.RSUM_CVR</div>
             <div><strong>User:</strong> @tableDetails.RSUM_CSH</div>
         }
@@ -30,9 +30,9 @@
             <div>Rate</div>
             <div>Amt</div>
         </div>
-        @if (orderData != null)
+        @if (itemData != null)
         {
-            @foreach (var item in orderData)
+            @foreach (var item in itemData)
             {
                 <div class="order-row">
                     <div>@item.RkotNo</div>
@@ -59,13 +59,13 @@
             </label>
         </div>
 
-        @if (orderData != null)
+        @if (itemData != null)
         {
             <!-- Right: Summary -->
             <div class="charges-summary">
                 <div class="summary-row">
                     <span>SubTotal</span>
-                    <span>@orderData.Sum(t => t.FnlBaseVal)</span>
+                    <span>@itemData.Sum(t => t.FnlBaseVal)</span>
                 </div>
                 <div class="summary-row">
                     <span>Discount</span>
@@ -73,11 +73,11 @@
                 </div>
                 <div class="summary-row">
                     <span>Tax</span>
-                    <span>@orderData.Sum(tax => tax.RkotTax)</span>
+                    <span>@itemData.Sum(tax => tax.RkotTax)</span>
                 </div>
                 <div class="summary-row total">
                     <span>Total</span>
-                    <span>@orderData.Sum(tax => tax.RkotTax + tax.FnlBaseVal) - discount</span>
+                    <span>@itemData.Sum(tax => tax.RkotTax + tax.FnlBaseVal) - discount</span>
                 </div>
             </div>
         }
@@ -139,7 +139,7 @@
 @code {
     private string? tableNumber;
     private importaintTableDetail? tableDetails;
-    private List<PfbRkotTrnDto>? orderData;
+    private List<PfbRkotTrnDto>? itemData;
 
     private bool showDiscountRemark = false;
     private bool showConfirm = false;
@@ -156,7 +156,7 @@
         if (!string.IsNullOrEmpty(TableNo))
         {
             tableDetails = null;
-            orderData = null;
+            itemData = null;
             tableNumber = TableNo;
             _ = LoadTableDetails();
             _ = LoadOrderData();
@@ -186,7 +186,7 @@
             var response = await Http.GetAsync($"api/CSATSU_RMS_GetOrderData/{tableNumber}/{pos}");
             if (response.IsSuccessStatusCode)
             {
-                orderData = await response.Content.ReadFromJsonAsync<List<PfbRkotTrnDto>>() ?? new();
+                itemData = await response.Content.ReadFromJsonAsync<List<PfbRkotTrnDto>>() ?? new();
             }
         }
         catch (Exception ex) { Console.WriteLine($"Error loading order data: {ex.Message}"); }
@@ -333,9 +333,10 @@
                 RBIL_TAXFREE = "n",
                 Tbl = tableNumber,
                 pos = pos,
+                cvr = orderDetail.FirstOrDefault()?.RsumCvr.ToString() ?? "",
                 Stw = orderDetail.FirstOrDefault()?.RsumStw ?? "",
-                Amount = (int)orderDetail.Sum(o => o.FnlBaseVal ?? 0),
-                TotalTax = (float)orderDetail.Sum(o => (o.RkotTax ?? 0)),
+                Amount = (int)orderDetail.Sum(o => o.RsumAmt ?? 0),
+                TotalTax = (float)itemData.Sum(o => (o.RkotTax ?? 0)),
                 RBIL_TAMT = 0,
                 RBIL_TOTAL = 0,
                 RBIL_STX = 0,
@@ -356,10 +357,10 @@
                 TaxStructureGroupWise = new List<TaxStructureGroupWise>(),
 
                 // Fill item data from RKOT summary
-                RKOT_TRN_DATA = orderDetail.Select(o => new RKOT_TRN_DATA
+                RKOT_TRN_DATA = itemData.Select(o => new RKOT_TRN_DATA
                 {
                     RKOT_NO = o.RkotNo ?? "",
-                    ItemCode = o.ItemName ?? "",
+                    ItemCode = o.RkotMnu ?? "",
                     DiscountPer = o.RkotDisc?.ToString() ?? "0",
                     RKOT_SNO = o.RkotSno?.ToString() ?? "0"
                 }).ToList(),
@@ -376,6 +377,19 @@
                 sub_item = new(),
                 cover_item = new(),
                 meal_item = new(),
+
+                // Initialize all lists
+                // ItemCode = new List<string>(),
+                // StrQty = new List<string>(),
+                // ItemRemark = new List<string>(),
+                // strAddon = new List<string>(),
+                // strModi = new List<string>(),
+                // strCombo = new List<string>(),
+                // strHappy = new List<string>(),
+                // strdisc = new List<string>(),
+                // sub_item = new List<string>(),
+                // cover_item = new List<string>(),
+                // meal_item = new List<string>(),
             };
 
             // Step 3: POST to Bill Generator API

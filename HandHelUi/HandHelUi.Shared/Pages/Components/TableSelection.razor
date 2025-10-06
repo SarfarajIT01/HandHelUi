@@ -26,7 +26,7 @@
                 {
                     @foreach (var table in Tables)
                     {
-                        <div class="table-card @(table.RmscTblsts != null ? "occupied" : "free")"
+                        <div class="table-card @(table.RmscTblsts == "K" ? "running": table.RmscTblsts == "P" ? "occupied" : "free")"
                              @onclick="() => SelectTable(table)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="table-icon" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M4 10h16v2H4v-2zm2 3h12l1 7h-2l-.5-3H7.5l-.5 3H5l1-7zM12 2a4 4 0 0 1 4 4h-8a4 4 0 0 1 4-4z" />
@@ -189,7 +189,14 @@
             color: #2b7a4b;
         }
 
+        .table-card.running {
+            background: #ffc10729;
+            color: #e36700;
+        }
+
         .table-card.occupied {
+            /* background: #0dcaf01c;
+            color: #0dcaf0; */
             background: #fdebec;
             color: #c62828;
         }
