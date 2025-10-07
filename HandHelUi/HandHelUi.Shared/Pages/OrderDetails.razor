@@ -2,6 +2,7 @@
 @using HandHelUi.Shared.Models
 @using Microsoft.AspNetCore.Components
 @using System.Text.Json
+@using System.Globalization
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject IJSRuntime JS
@@ -147,6 +148,9 @@
     private string discountReason = "";
     private int discount = 0;
 
+    // Per-bill GST tax rules cache
+    private readonly Dictionary<string, List<TaxRuleDto>> _taxRuleCache = new(StringComparer.OrdinalIgnoreCase);
+
     [Parameter]
     [SupplyParameterFromQuery]
     public string? TableNo { get; set; }
@@ -207,13 +211,12 @@
             var data = await response.Content.ReadFromJsonAsync<List<string>>();
             if (data != null && data.Count > 0 && data[0] == "COMP")
             {
-                // COMP flow
                 Navigation.NavigateTo($"/comp?TableNo={tableNumber}");
                 return;
             }
 
-            // Check discount logic
-            if (/* check your discount condition */ false)
+            // Example toggle for remarks flow
+            if (false)
             {
                 showDiscountRemark = true;
             }
@@ -245,62 +248,6 @@
         showConfirm = true;
     }
 
-    // private async Task GenBill()
-    // {
-    //     try
-    //     {
-    //         isGenerating = true;
-    //         showConfirm = false;
-    //         StateHasChanged();
-
-    //         Step 1: Get Order Details
-    //         var orderResponse = await Http.GetAsync($"api/CSATSU_RMS_RKOT_SUM/{tableNumber}");
-    //         if (!orderResponse.IsSuccessStatusCode)
-    //         {
-    //             var msg = await orderResponse.Content.ReadAsStringAsync();
-    //             await JS.InvokeVoidAsync("alert", msg);
-    //             return;
-    //         }
-
-    //         var orderDetail = await orderResponse.Content.ReadFromJsonAsync<List<PfbRkotSumDto>>();
-    //         var orderDetail = await orderResponse.Content.ReadFromJsonAsync<List<PfbRkotSumDto>>();
-    //         if (orderDetail == null || orderDetail.Count == 0)
-    //         {
-    //             await JS.InvokeVoidAsync("alert", "Bill already generated or no order found.");
-    //             return;
-    //         }
-
-    //         Step 2: Proceed to Generate Bill
-    //         var pos = await GetPosCode();
-    //         var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderDetail);
-
-    //         var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderDetail);
-
-    //         var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderDetail);
-
-    //         if (response.IsSuccessStatusCode)
-    //         {
-    //             var billNo = await response.Content.ReadAsStringAsync();
-    //             await JS.InvokeVoidAsync("alert", $"Bill generated successfully! Bill No: {billNo}");
-    //             Navigation.NavigateTo($"/finalbill?TableNo={tableNumber}");
-    //         }
-    //         else
-    //         {
-    //             await JS.InvokeVoidAsync("alert", "Failed to generate bill.");
-    //         }
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
-    //     }
-    //     finally
-    //     {
-    //         isGenerating = false;
-    //         StateHasChanged();
-    //     }
-    // }
-
-
     private async Task GenBill()
     {
         try
@@ -309,7 +256,6 @@
             showConfirm = false;
             StateHasChanged();
 
-            // Step 1: Get Order Details (RKOT Summary)
             var orderResponse = await Http.GetAsync($"api/CSATSU_RMS_RKOT_SUM/{tableNumber}");
             if (!orderResponse.IsSuccessStatusCode)
             {
@@ -317,7 +263,6 @@
                 await JS.InvokeVoidAsync("alert", msg);
                 return;
             }
-
             var orderDetail = await orderResponse.Content.ReadFromJsonAsync<List<PfbRkotSumDto>>();
             if (orderDetail == null || orderDetail.Count == 0)
             {
@@ -325,26 +270,34 @@
                 return;
             }
 
-            // Step 2: Create OrderData (the DTO your API expects)
-            var pos = await GetPosCode();
+            // 1) Build tax accumulators for current items
+            var acc = await BuildTaxDetailsAsync(itemData ?? Enumerable.Empty<PfbRkotTrnDto>());
 
+            // 2) Build API tax lists (using existing shared models with string amounts)
+            var lists = BuildApiListsFromAccumulators(acc);
+
+            // 3) Compose order data per shared model
+            var pos = await GetPosCode();
             var orderData = new OrderDataDto
             {
-                RBIL_TAXFREE = "n",
+                RBIL_TAXFREE = lists.RBIL_TAXFREE ? "y" : "n",
                 Tbl = tableNumber,
                 pos = pos,
                 cvr = orderDetail.FirstOrDefault()?.RsumCvr.ToString() ?? "",
                 Stw = orderDetail.FirstOrDefault()?.RsumStw ?? "",
                 Amount = (int)orderDetail.Sum(o => o.RsumAmt ?? 0),
-                TotalTax = (float)itemData.Sum(o => (o.RkotTax ?? 0)),
-                RBIL_TAMT = 0,
-                RBIL_TOTAL = 0,
-                RBIL_STX = 0,
-                RBIL_OTX = 0,
-                RBIL_DC1 = 0,
-                RBIL_CVCHR2 = 0,
-                RBIL_ROUND = 0,
-                RBIL_TaxableDisc = 0,
+                TotalTax = (float)(itemData?.Sum(o => (o.RkotTax ?? 0)) ?? 0),
+
+                // Aggregated group totals into header floats
+                RBIL_TAMT = lists.RBIL_TAMT_TOTAL,
+                RBIL_TOTAL = lists.RBIL_TOTAL_TOTAL,
+                RBIL_STX = lists.RBIL_STX_TOTAL,
+                RBIL_OTX = lists.RBIL_OTX_TOTAL,
+                RBIL_DC1 = lists.RBIL_DC1_TOTAL,
+                RBIL_CVCHR2 = lists.RBIL_CVCHR2_TOTAL,
+                RBIL_ROUND = lists.RBIL_ROUND_TOTAL,
+                RBIL_TaxableDisc = lists.RBIL_TaxableDisc_TOTAL,
+
                 run_date = DateTime.Now.ToString("yyyy-MM-dd"),
                 odrem = "Bill generation from handheld",
                 odtype = "N",
@@ -352,12 +305,12 @@
                 G_Name = "Guest",
                 flag = "F",
                 token = "",
-                TaxStructure = new List<TaxStructure>(),
-                TaxStructure2 = new List<TaxStructure2>(),
-                TaxStructureGroupWise = new List<TaxStructureGroupWise>(),
 
-                // Fill item data from RKOT summary
-                RKOT_TRN_DATA = itemData.Select(o => new RKOT_TRN_DATA
+                TaxStructure = lists.TaxStructure,
+                TaxStructure2 = lists.TaxStructure2,
+                TaxStructureGroupWise = lists.TaxStructureGroupWise,
+
+                RKOT_TRN_DATA = (itemData ?? new()).Select(o => new RKOT_TRN_DATA
                 {
                     RKOT_NO = o.RkotNo ?? "",
                     ItemCode = o.RkotMnu ?? "",
@@ -365,7 +318,6 @@
                     RKOT_SNO = o.RkotSno?.ToString() ?? "0"
                 }).ToList(),
 
-                // Optional blank lists
                 ItemCode = new(),
                 StrQty = new(),
                 ItemRemark = new(),
@@ -377,24 +329,9 @@
                 sub_item = new(),
                 cover_item = new(),
                 meal_item = new(),
-
-                // Initialize all lists
-                // ItemCode = new List<string>(),
-                // StrQty = new List<string>(),
-                // ItemRemark = new List<string>(),
-                // strAddon = new List<string>(),
-                // strModi = new List<string>(),
-                // strCombo = new List<string>(),
-                // strHappy = new List<string>(),
-                // strdisc = new List<string>(),
-                // sub_item = new List<string>(),
-                // cover_item = new List<string>(),
-                // meal_item = new List<string>(),
             };
 
-            // Step 3: POST to Bill Generator API
             var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_FinallBillGenerator", orderData);
-
             if (response.IsSuccessStatusCode)
             {
                 var billNo = await response.Content.ReadAsStringAsync();
@@ -418,10 +355,372 @@
         }
     }
 
-
-
     private async Task<string> GetPosCode() => "001"; // stub
+
+    // ================== TAX LOGIC (internal types only; payload uses shared models) ==================
+
+    private sealed class TaxAccumulators
+    {
+        public Dictionary<string, TaxEditDetailEntry> PerTax { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, Dictionary<string, GroupTaxEntry>> GroupBySerial { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, GroupEnvelopeTotals> GroupEnvelopes { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public void EnsureSerial(string serial)
+        {
+            if (!GroupBySerial.ContainsKey(serial))
+                GroupBySerial[serial] = new(StringComparer.OrdinalIgnoreCase);
+            if (!GroupEnvelopes.ContainsKey(serial))
+                GroupEnvelopes[serial] = new GroupEnvelopeTotals();
+        }
+    }
+
+    private sealed class TaxRuleDto
+    {
+        public string TaxableNonTaxable { get; set; } = "";
+        public decimal BASE { get; set; }
+        public decimal Factor { get; set; }
+        public string TaxOn { get; set; } = "";
+        public string TaxType { get; set; } = ""; // "E" => OTX, else STX
+        public string TaxCode { get; set; } = "";
+        public string TaxName { get; set; } = "";
+        public bool Editable { get; set; }
+        public int TaxSrNo { get; set; }
+        public int TaxNo { get; set; }
+    }
+
+    private sealed class TaxEditDetailEntry
+    {
+        public string TaxName { get; set; } = "";
+        public decimal TaxableAmount { get; set; }
+        public decimal TaxPer { get; set; }
+        public decimal TotalTax { get; set; }
+        public bool Checked { get; set; } = true;
+        public bool Editable { get; set; }
+        public decimal TTWSC { get; set; }
+        public int TaxSerialNo { get; set; }
+        public int TaxApplyedOn { get; set; }
+        public string TaxOn { get; set; } = "";
+        public decimal Tax_print { get; set; }
+        public string TaxType { get; set; } = "";
+    }
+
+    private sealed class GroupTaxEntry
+    {
+        public string TaxName { get; set; } = "";
+        public decimal TaxableAmount { get; set; }
+        public decimal TaxPer { get; set; }
+        public bool Checked { get; set; } = true;
+        public bool Editable { get; set; }
+        public decimal TTWSC { get; set; }
+        public int TaxSerialNo { get; set; }
+        public int TaxApplyedOn { get; set; }
+        public string TaxOn { get; set; } = "";
+        public decimal Tax_print { get; set; }
+        public decimal TotalAmtCal { get; set; }
+        public decimal TotalSC { get; set; }     // STX bucket
+        public decimal TotalTax { get; set; }
+        public decimal Otrcharge { get; set; }   // OTX bucket
+        public decimal GrpDiscount { get; set; }
+        public string TaxType { get; set; } = "";
+    }
+
+    private sealed class GroupEnvelopeTotals
+    {
+        public decimal RBill_TAMT { get; set; }
+        public decimal RBill_NAMT { get; set; }
+        public decimal GRP_AMT { get; set; }
+    }
+
+    private async Task<List<TaxRuleDto>> GetBillTaxAsync(string gstName)
+    {
+        if (string.IsNullOrWhiteSpace(gstName)) return new();
+        if (_taxRuleCache.TryGetValue(gstName, out var cached)) return cached;
+
+        var resp = await Http.GetAsync($"api/GetBillTax/{Uri.EscapeDataString(gstName)}");
+        resp.EnsureSuccessStatusCode();
+        var rules = await resp.Content.ReadFromJsonAsync<List<TaxRuleDto>>() ?? new();
+        _taxRuleCache[gstName] = rules;
+        return rules;
+    }
+
+    private void UpsertPerTax(Dictionary<string, TaxEditDetailEntry> perTax, TaxRuleDto rule, decimal taxableAdd, decimal taxAdd)
+    {
+        if (!perTax.TryGetValue(rule.TaxCode, out var entry))
+        {
+            entry = new TaxEditDetailEntry
+            {
+                TaxName = rule.TaxName,
+                TaxPer = rule.Factor,
+                Editable = rule.Editable,
+                TaxSerialNo = rule.TaxSrNo,
+                TaxApplyedOn = rule.TaxNo,
+                TaxOn = rule.TaxOn,
+                TaxType = rule.TaxType,
+                Checked = true
+            };
+            perTax[rule.TaxCode] = entry;
+        }
+        entry.TaxableAmount += taxableAdd;
+        entry.TotalTax += taxAdd;
+        entry.Tax_print = entry.TotalTax;
+    }
+
+    // Envelope updates removed; only per-tax accumulation here
+    private void UpsertGroupTax(
+        Dictionary<string, Dictionary<string, GroupTaxEntry>> bySerial,
+        string serial, TaxRuleDto rule,
+        decimal itemRate, decimal taxableAdd, decimal taxAdd,
+        decimal serviceChargeAdd, decimal otherChargeAdd,
+        decimal grpDiscountAdd)
+    {
+        if (!bySerial[serial].TryGetValue(rule.TaxCode, out var gt))
+        {
+            gt = new GroupTaxEntry
+            {
+                TaxName = rule.TaxName,
+                TaxPer = rule.Factor,
+                Editable = rule.Editable,
+                TaxSerialNo = rule.TaxSrNo,
+                TaxApplyedOn = rule.TaxNo,
+                TaxOn = rule.TaxOn,
+                TaxType = rule.TaxType,
+                Checked = true
+            };
+            bySerial[serial][rule.TaxCode] = gt;
+        }
+        gt.TaxableAmount += taxableAdd;
+        gt.TotalTax += taxAdd;
+        gt.Tax_print += taxAdd;
+        gt.TotalSC += serviceChargeAdd;   // STX
+        gt.Otrcharge += otherChargeAdd;  // OTX
+        gt.TotalAmtCal += itemRate;
+        gt.GrpDiscount += grpDiscountAdd;
+    }
+
+    private async Task<TaxAccumulators> BuildTaxDetailsAsync(IEnumerable<PfbRkotTrnDto> items)
+    {
+        var acc = new TaxAccumulators();
+        foreach (var it in items)
+        {
+            var qty = Convert.ToDecimal(it.RkotQty ?? 0);
+            var rate = Convert.ToDecimal(it.RkotRat ?? 0);
+            var gstName = (it.RkotStax ?? "").Trim();
+            // var gstName = (it.RkotStax ?? it.RkotSTaxName ?? "").Trim();
+            var serial = it.SerialNoStartWith ?? "DEFAULT";
+            // var serial = it.SerialNoStartWith ?? it.SeriesFlag ?? "DEFAULT";
+            var itemRate = rate * qty;
+
+            if (qty <= 0 || rate < 0) continue;
+
+            acc.EnsureSerial(serial);
+
+            // Per-item base numbers
+            var discountPer = Convert.ToDecimal(it.RkotDisc ?? 0);
+            var curHHDiscount = (rate * qty * discountPer) / 100m;
+            var calculatedRateBase = rate * qty;
+            var calculatedRateAfterDisc = calculatedRateBase - curHHDiscount;
+
+            // Fetch rules once per item
+            var rules = await GetBillTaxAsync(gstName);
+
+            // Envelope totals once per item (legacy behavior)
+            {
+                var env = acc.GroupEnvelopes[serial];
+                if (rules.Count > 0)
+                {
+                    var first = rules[0];
+                    if (string.Equals(first.TaxableNonTaxable, "N", StringComparison.OrdinalIgnoreCase))
+                        env.RBill_NAMT += calculatedRateAfterDisc;
+                    else
+                        env.RBill_TAMT += calculatedRateAfterDisc;
+                }
+                else
+                {
+                    // No rules => treat as non-taxable amount
+                    env.RBill_NAMT += calculatedRateAfterDisc;
+                }
+                // Group base uses pre-discount sum as in legacy GRP_AMT
+                env.GRP_AMT += calculatedRateBase;
+            }
+
+            // Taxes per rule
+            foreach (var rule in rules)
+            {
+                if (string.Equals(rule.TaxOn, "Disc", StringComparison.OrdinalIgnoreCase))
+                {
+                    var taxableAmt = calculatedRateAfterDisc;
+                    var presentTax = (taxableAmt * rule.Factor) / 100m;
+                    var serviceCharge = rule.TaxType == "E" ? 0m : presentTax;
+                    var otherCharge = rule.TaxType == "E" ? presentTax : 0m;
+
+                    UpsertPerTax(acc.PerTax, rule, taxableAmt, presentTax);
+                    UpsertGroupTax(acc.GroupBySerial, serial, rule,
+                                   itemRate, taxableAmt, presentTax,
+                                   serviceCharge, otherCharge, curHHDiscount);
+                }
+                else if (string.Equals(rule.TaxOn, "Tax", StringComparison.OrdinalIgnoreCase))
+                {
+                    var refRule = rules.FirstOrDefault(r => r.TaxSrNo == rule.TaxNo);
+                    var addTaxNoValue = refRule is null ? 0m : (calculatedRateAfterDisc * refRule.Factor) / 100m;
+                    var taxOnDiscForTaxableAmount = ((calculatedRateAfterDisc * rule.BASE) / 100m) + addTaxNoValue;
+                    var presentTax = (taxOnDiscForTaxableAmount * rule.Factor) / 100m;
+                    var serviceCharge = rule.TaxType == "E" ? 0m : presentTax;
+                    var otherCharge = rule.TaxType == "E" ? presentTax : 0m;
+
+                    UpsertPerTax(acc.PerTax, rule, taxOnDiscForTaxableAmount, presentTax);
+                    UpsertGroupTax(acc.GroupBySerial, serial, rule,
+                                   itemRate, taxOnDiscForTaxableAmount, presentTax,
+                                   serviceCharge, otherCharge, curHHDiscount);
+                }
+                else
+                {
+                    // Default: pre-discount base
+                    var taxableAmt = calculatedRateBase;
+                    var presentTax = (taxableAmt * rule.Factor) / 100m;
+                    var serviceCharge = rule.TaxType == "E" ? 0m : presentTax;
+                    var otherCharge = rule.TaxType == "E" ? presentTax : 0m;
+
+                    UpsertPerTax(acc.PerTax, rule, taxableAmt, presentTax);
+                    UpsertGroupTax(acc.GroupBySerial, serial, rule,
+                                   itemRate, taxableAmt, presentTax,
+                                   serviceCharge, otherCharge, curHHDiscount);
+                }
+            }
+        }
+        return acc;
+    }
+
+    private sealed class TaxListsResult
+    {
+        public List<TaxStructure> TaxStructure { get; } = new();
+        public List<TaxStructure2> TaxStructure2 { get; } = new();
+        public List<TaxStructureGroupWise> TaxStructureGroupWise { get; } = new();
+        public bool RBIL_TAXFREE { get; set; }
+
+        // Aggregates for OrderDataDto header floats
+        public float RBIL_TAMT_TOTAL { get; set; }
+        public float RBIL_TOTAL_TOTAL { get; set; }
+        public float RBIL_STX_TOTAL { get; set; }
+        public float RBIL_OTX_TOTAL { get; set; }
+        public float RBIL_DC1_TOTAL { get; set; }
+        public float RBIL_CVCHR2_TOTAL { get; set; }
+        public float RBIL_ROUND_TOTAL { get; set; }
+        public float RBIL_TaxableDisc_TOTAL { get; set; }
+    }
+
+    private static string Fmt(decimal d) => d.ToString("0.00", CultureInfo.InvariantCulture);
+
+    private TaxListsResult BuildApiListsFromAccumulators(TaxAccumulators acc)
+    {
+        var result = new TaxListsResult();
+
+        // TaxStructure from per-tax
+        bool anyChecked = false;
+        foreach (var (code, entry) in acc.PerTax)
+        {
+            if (!entry.Checked) continue;
+            anyChecked = true;
+
+            result.TaxStructure.Add(new TaxStructure
+            {
+                RTax_TCode = code,
+                RTax_OnAmt = Fmt(entry.TaxableAmount),
+                RTax_TaxAmt = Fmt(entry.Tax_print)
+            });
+        }
+        result.RBIL_TAXFREE = !anyChecked;
+
+        // TaxStructure2 and GroupWise; also compute header aggregates
+        decimal agg_tamt = 0, agg_namt = 0, agg_grpstx = 0, agg_grpotx = 0, agg_dc1 = 0, agg_cvchr2 = 0, agg_round = 0, agg_taxableDisc = 0, agg_total = 0;
+
+        foreach (var (serial, map) in acc.GroupBySerial)
+        {
+            decimal rbil_stx = 0, rbil_otx = 0, totalTaxCal = 0, totalDiscount = 0, rtax_onAmt = 0, rtax_taxAmt = 0;
+            string lastTaxCode = "";
+
+            foreach (var (code, g) in map)
+            {
+                if (!g.Checked) continue;
+                lastTaxCode = code;
+
+                var rtaxOnAmt = Math.Round(g.TaxableAmount, 2);
+                var stx = Math.Round(g.TotalSC, 2);
+                var otx = Math.Round(g.Otrcharge, 2);
+                var taxAmtForRow = g.TaxType == "E" ? otx : stx;
+
+                result.TaxStructure2.Add(new TaxStructure2
+                {
+                    seriesFlag = serial,
+                    RTax_TCode = code,
+                    RTax_OnAmt = Fmt(rtaxOnAmt),
+                    RTax_TaxAmt = Fmt(taxAmtForRow),
+                    RTax_TaxTyp = g.TaxType,
+                    TotalTax = (float)Math.Round(g.TotalTax, 2),
+                    Otrcharge = (float)otx,
+                    TotalSC = (float)stx
+                });
+
+                totalTaxCal += stx + otx;
+                totalDiscount += Math.Round(g.GrpDiscount, 2);
+                rbil_stx += stx;
+                rbil_otx += otx;
+                rtax_onAmt += rtaxOnAmt;
+                rtax_taxAmt += Math.Round(g.Tax_print, 2);
+            }
+
+            var env = acc.GroupEnvelopes[serial];
+            var rbil_tamt = env.RBill_TAMT;
+            var rbil_namt = env.RBill_NAMT;
+            var grp_amt = env.GRP_AMT;
+
+            var rbil_cvchr2 = grp_amt + totalTaxCal - totalDiscount;
+            var rbil_round = Math.Round(rbil_cvchr2, MidpointRounding.AwayFromZero);
+            var rbil_taxableDisc = Math.Round(totalTaxCal, 2);
+            var rbil_total = rbil_cvchr2;
+
+            result.TaxStructureGroupWise.Add(new TaxStructureGroupWise
+            {
+                seriesFlag = serial,
+                RTax_TCode = lastTaxCode,
+                RTax_OnAmt = Fmt(rtax_onAmt),
+                RTax_TaxAmt = Fmt(rtax_taxAmt),
+                RBIL_TAMT = Fmt(rbil_tamt),
+                RBIL_NAMT = Fmt(rbil_namt),
+                RBIL_STX = Fmt(rbil_stx),
+                RBIL_OTX = Fmt(rbil_otx),
+                RBIL_DC1 = Fmt(totalDiscount),
+                RBIL_CVCHR2 = Fmt(rbil_cvchr2),
+                RBIL_ROUND = Fmt(rbil_round),
+                RBIL_TaxableDisc = Fmt(rbil_taxableDisc),
+                RBIL_TOTAL = Fmt(rbil_total)
+            });
+
+            // Aggregate for OrderDataDto header floats
+            agg_tamt += rbil_tamt;
+            agg_namt += rbil_namt; // not exposed in header but kept if needed
+            agg_grpstx += rbil_stx;
+            agg_grpotx += rbil_otx;
+            agg_dc1 += totalDiscount;
+            agg_cvchr2 += rbil_cvchr2;
+            agg_round += rbil_round;
+            agg_taxableDisc += rbil_taxableDisc;
+            agg_total += rbil_total;
+        }
+
+        // Header totals
+        result.RBIL_TAMT_TOTAL = (float)Math.Round(agg_tamt, 2);
+        result.RBIL_STX_TOTAL = (float)Math.Round(agg_grpstx, 2);
+        result.RBIL_OTX_TOTAL = (float)Math.Round(agg_grpotx, 2);
+        result.RBIL_DC1_TOTAL = (float)Math.Round(agg_dc1, 2);
+        result.RBIL_CVCHR2_TOTAL = (float)Math.Round(agg_cvchr2, 2);
+        result.RBIL_ROUND_TOTAL = (float)Math.Round(agg_round, 2);
+        result.RBIL_TaxableDisc_TOTAL = (float)Math.Round(agg_taxableDisc, 2);
+        result.RBIL_TOTAL_TOTAL = (float)Math.Round(agg_total, 2);
+
+        return result;
+    }
 }
+
+
 
 
 <style scoped>

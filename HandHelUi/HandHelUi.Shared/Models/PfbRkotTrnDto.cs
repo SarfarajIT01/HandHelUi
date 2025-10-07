@@ -57,6 +57,9 @@ namespace HandHelUi.Shared.Models
         public string? DiscountAllow { get; set; }
         public string? ItemGroup { get; set; }
         public string? GRPSubName { get; set; }
+        public string? SerialNoStartWith { get; set; }
+
+
 
     }
 }

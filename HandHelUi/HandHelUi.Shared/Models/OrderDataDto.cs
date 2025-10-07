@@ -9,6 +9,7 @@ namespace HandHelUi.Shared.Models
     public class OrderDataDto
     {
         public string RBIL_TAXFREE { get; set; }
+       
         public string Tbl { get; set; }
         public string Stw { get; set; }
         public int Amount { get; set; }
