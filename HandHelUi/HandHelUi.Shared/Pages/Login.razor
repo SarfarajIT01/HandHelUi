@@ -125,7 +125,7 @@
             var response = await Http.GetAsync($"api/CSATSU_RMS_Su2Login/{_clientId}/{_username}/{_password}");
             if (response.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("localStorage.removeItem", "tableStewardSelectionList");
+                // await JS.InvokeVoidAsync("localStorage.removeItem", "tableStewardSelectionList");
                 var getCover = await Http.GetAsync("api/CSATSU_RMS_GetRunningDate");
                 if (getCover.IsSuccessStatusCode)
                 {

@@ -490,12 +490,15 @@
                 await JS.InvokeVoidAsync("localStorage.setItem", "posCode", currentPosCodeFromItems);
                 posCode = currentPosCodeFromItems;
             }
+
+            // removable this part later
             else
             {
                 await JS.InvokeVoidAsync("localStorage.setItem", "posCode", "001");
                 posCode = "001";
             }
         }
+        // removable this part later
         else
         {
             await JS.InvokeVoidAsync("localStorage.setItem", "posCode", "001");

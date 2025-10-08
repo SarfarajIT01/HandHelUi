@@ -25,6 +25,7 @@ namespace HandHelUi.Shared.Models
         public List<string> ItemCode { get; set; }
         public List<string> StrQty { get; set; }
         public string pos { get; set; }
+        public string OutletId { get; set; }
         public string cvr { get; set; }
         public string run_date { get; set; }
 

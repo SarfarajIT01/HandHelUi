@@ -147,6 +147,9 @@
     private bool isGenerating = false;
     private string discountReason = "";
     private int discount = 0;
+    private string posCode = "";
+    private string outletId = "";
+
 
     // Per-bill GST tax rules cache
     private readonly Dictionary<string, List<TaxRuleDto>> _taxRuleCache = new(StringComparer.OrdinalIgnoreCase);
@@ -155,8 +158,11 @@
     [SupplyParameterFromQuery]
     public string? TableNo { get; set; }
 
-    protected override void OnParametersSet()
+    protected override async void OnParametersSet()
     {
+        posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode");
+        outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+
         if (!string.IsNullOrEmpty(TableNo))
         {
             tableDetails = null;
@@ -171,8 +177,8 @@
     {
         try
         {
-            var pos = await GetPosCode();
-            var response = await Http.GetAsync($"api/ImportaintTableDetails/GetByID/{tableNumber}/{pos}/T");
+            // var pos = await GetPosCode();
+            var response = await Http.GetAsync($"api/ImportaintTableDetails/GetByID/{tableNumber}/{posCode}/T");
             if (response.IsSuccessStatusCode)
             {
                 tableDetails = await response.Content.ReadFromJsonAsync<importaintTableDetail>();
@@ -186,8 +192,8 @@
     {
         try
         {
-            var pos = await GetPosCode();
-            var response = await Http.GetAsync($"api/CSATSU_RMS_GetOrderData/{tableNumber}/{pos}");
+            // var pos = await GetPosCode();
+            var response = await Http.GetAsync($"api/CSATSU_RMS_GetOrderData/{tableNumber}/{posCode}");
             if (response.IsSuccessStatusCode)
             {
                 itemData = await response.Content.ReadFromJsonAsync<List<PfbRkotTrnDto>>() ?? new();
@@ -216,7 +222,7 @@
             }
 
             // Example toggle for remarks flow
-            if (false)
+            if (/* discount condition */ false)
             {
                 showDiscountRemark = true;
             }
@@ -277,16 +283,16 @@
             var lists = BuildApiListsFromAccumulators(acc);
 
             // 3) Compose order data per shared model
-            var pos = await GetPosCode();
             var orderData = new OrderDataDto
             {
                 RBIL_TAXFREE = lists.RBIL_TAXFREE ? "y" : "n",
                 Tbl = tableNumber,
-                pos = pos,
-                cvr = orderDetail.FirstOrDefault()?.RsumCvr.ToString() ?? "",
-                Stw = orderDetail.FirstOrDefault()?.RsumStw ?? "",
-                Amount = (int)orderDetail.Sum(o => o.RsumAmt ?? 0),
-                TotalTax = (float)(itemData?.Sum(o => (o.RkotTax ?? 0)) ?? 0),
+                pos = posCode,
+                OutletId = outletId,
+                cvr = orderDetail.FirstOrDefault()?.RsumCvr.ToString() ?? "",  // not storing this feild in old api db
+                Stw = orderDetail.FirstOrDefault()?.RsumStw ?? "",  // not storing this feild in old api db
+                Amount = (int)orderDetail.Sum(o => o.RsumAmt ?? 0),  // not storing this feild in old api db
+                TotalTax = (float)(itemData?.Sum(o => (o.RkotTax ?? 0)) ?? 0),  // not storing this feild in old api db
 
                 // Aggregated group totals into header floats
                 RBIL_TAMT = lists.RBIL_TAMT_TOTAL,
@@ -300,11 +306,11 @@
 
                 run_date = DateTime.Now.ToString("yyyy-MM-dd"),
                 odrem = "Bill generation from handheld",
-                odtype = "N",
                 G_Code = "G001",
                 G_Name = "Guest",
-                flag = "F",
-                token = "",
+                odtype = "N",   // not storing this feild in old api db 
+                flag = "B",     // not storing this feild in old api db
+                token = "",     // not storing this feild in old api db
 
                 TaxStructure = lists.TaxStructure,
                 TaxStructure2 = lists.TaxStructure2,
@@ -318,6 +324,7 @@
                     RKOT_SNO = o.RkotSno?.ToString() ?? "0"
                 }).ToList(),
 
+                // these feilds are not storing in old api db
                 ItemCode = new(),
                 StrQty = new(),
                 ItemRemark = new(),
@@ -336,7 +343,8 @@
             {
                 var billNo = await response.Content.ReadAsStringAsync();
                 await JS.InvokeVoidAsync("alert", $"Bill generated successfully! Bill No: {billNo}");
-                Navigation.NavigateTo($"/finalbill?TableNo={tableNumber}");
+                // Navigation.NavigateTo($"/finalbill?TableNo={tableNumber}");
+                Navigation.NavigateTo($"/menu/{outletId}", forceLoad: true);
             }
             else
             {
@@ -355,7 +363,7 @@
         }
     }
 
-    private async Task<string> GetPosCode() => "001"; // stub
+    // private async Task<string> GetPosCode() => "001"; stub
 
     // ================== TAX LOGIC (internal types only; payload uses shared models) ==================
 
@@ -505,7 +513,7 @@
             var rate = Convert.ToDecimal(it.RkotRat ?? 0);
             var gstName = (it.RkotStax ?? "").Trim();
             // var gstName = (it.RkotStax ?? it.RkotSTaxName ?? "").Trim();
-            var serial = it.SerialNoStartWith ?? "DEFAULT";
+            var serial = it.SerialNoStartWith;
             // var serial = it.SerialNoStartWith ?? it.SeriesFlag ?? "DEFAULT";
             var itemRate = rate * qty;
 

@@ -238,8 +238,8 @@
     {
         if (firstRender)
         {
-            outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId") ?? "001";
-            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode") ?? "001";
+            outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode");
             _isInitialized = true;
             StateHasChanged();
         }
@@ -255,8 +255,8 @@
         searchTerm = term;
         if (_isInitialized)
         {
-            outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId") ?? "001";
-            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode") ?? "001";
+            outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode");
         }
         Navigation.NavigateTo($"/menu/{outletId}?search={searchTerm}&posCode={posCode}");
     }
