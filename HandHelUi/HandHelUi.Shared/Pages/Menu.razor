@@ -512,7 +512,6 @@
     }
 
     private void OnTablePopupChanged(bool value) => ShowTablePopup = value;
-    // private void OnStewardPopupChanged(bool value) => ShowStwordPopup = value;
 
 
     private async void HandleTableSelected(PfbRmscMst table)
@@ -533,7 +532,6 @@
 
             if (selectionList.ContainsKey(tableCode))
             {
-                // 🔹 Agar ye table pehle se localStorage me hai → directly assign
                 var savedSelection = selectionList[tableCode];
                 SelectedSteward = savedSelection.SelectedSteward;
                 SelectedTable = savedSelection.SelectedTable;
@@ -541,7 +539,6 @@
             }
             else
             {
-                // 🔹 Agar localStorage me nahi hai → popup dikhao
                 if (rmsStwkot == "y" && SelectedTable?.RmscTblsts != "K")
                 {
                     ShowStewardPopup = true;
@@ -558,38 +555,6 @@
         }
     }
 
-
-
-    // private async void HandleTableSelected(PfbRmscMst table)
-    // {
-    //     var selectionJson = await JS.InvokeAsync<string>("localStorage.getItem", "tableStewardSelection");
-    //     var selection = JsonSerializer.Deserialize<TableStewardSelection>(selectionJson);
-    //     var rmsStwkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsStwkot");
-    //     var rmsCovkot = await JS.InvokeAsync<string>("localStorage.getItem", "rmsCovkot");
-    //     RmsCovkot = rmsCovkot;
-    //     if (table != null && (table.RmscCod != selection?.SelectedTable?.RmscCod || table.RmscTblsts != "K"))
-    //     {
-    //         SelectedTable = table;
-    //         if (rmsStwkot == "y" && SelectedSteward == null && SelectedTable?.RmscTblsts != "K")
-    //         {
-    //             ShowStewardPopup = true;
-    //             StateHasChanged();
-    //             return;
-    //         }
-    //         else if (rmsCovkot == "y" && SelectedCovor == 1 && SelectedTable?.RmscTblsts != "K")
-    //         {
-    //             ShowCovorPopup = true;
-    //             StateHasChanged();
-    //             return;
-    //         }
-    //     }
-    //     else
-    //     {
-    //         SelectedSteward = selection?.SelectedSteward;
-    //         SelectedTable = selection?.SelectedTable;
-    //         SelectedCovor = selection.SelectedCovor;
-    //     }
-    // }
 
     private async void HandleToggleCart()
     {
