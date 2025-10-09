@@ -10,10 +10,14 @@
             <li class="nav-item">
                 <button class="nav-link" @onclick="OnTableClick">
                     <i class="bi bi-binoculars"></i>
-                    <span class="nav-text">Table No
+                    <span class="nav-text">Table 
                         @if (tableNo !=null)
                         {
-                            @tableNo
+                            <text>- </text> @tableNo
+                        }
+                        else
+                        {
+                            <text>No</text>
                         }
                     </span>
                 </button>

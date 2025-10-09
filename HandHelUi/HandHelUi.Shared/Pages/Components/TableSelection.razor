@@ -2,6 +2,7 @@
 @using HandHelUi.Shared.Services
 @using Microsoft.AspNetCore.Components
 @using System.Net.Http.Json
+@inject IJSRuntime JS
 @inject HttpClient Http
 @inject UserState UserState
 @inject TableSelectionService TableSelectionService
@@ -109,9 +110,16 @@
 
     private async Task SelectTable(PfbRmscMst table)
     {
-        await OnTableSelected.InvokeAsync(table);
-        TableSelectionService.SelectTable(table);
-        ClosePopup();
+        if (table.RmscTblsts != "P")
+        {
+            await OnTableSelected.InvokeAsync(table);
+            TableSelectionService.SelectTable(table);
+            ClosePopup();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "Settlement is pending, You cannot select this table!");
+        }
     }
 }
 

@@ -1,0 +1,121 @@
+﻿@page "/ordertype"
+@if (IsOpen)
+{
+    <div class="popup-overlay">
+        <div class="popup-card animate-popup">
+            <h3 class="popup-title">Select Order Type</h3>
+
+            <div class="popup-btn-group">
+                <button class="btn-popup btn-guest" @onclick='() => SelectType(" GUEST")'>GUEST</button>
+                <button class="btn-popup btn-complementary" @onclick='() => SelectType(" COMPLEMENTARY")'>COMPLEMENTARY</button>
+            </div>
+
+            <button class="btn-popup btn-back mt-3" @onclick="ClosePopup">Back</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; } = true;
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<string> OnTypeSelected { get; set; }
+
+    private async Task SelectType(string type)
+    {
+        await OnTypeSelected.InvokeAsync(type);
+        await ClosePopup();
+    }
+
+    private async Task ClosePopup()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(IsOpen);
+    }
+}
+<style>
+    /* Popup Overlay */
+    .popup-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+    }
+
+    /* Popup Card */
+    .popup-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 24px;
+        width: 320px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    /* Title */
+    .popup-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 24px;
+    }
+
+    /* Buttons */
+    .btn-popup {
+        display: block;
+        width: 100%;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-weight: 600;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 12px;
+    }
+
+        .btn-popup:hover {
+            transform: scale(1.05);
+        }
+
+    /* Gradient Buttons */
+    .btn-guest {
+        background: linear-gradient(90deg, #7f00ff, #3b82f6);
+        color: white;
+    }
+
+    .btn-complementary {
+        background: linear-gradient(90deg, #ec4899, #8b5cf6);
+        color: white;
+    }
+
+    /* Back Button */
+    .btn-back {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    /* Animation */
+    @@keyframes popupIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    }
+
+    .animate-popup {
+        animation: popupIn 0.3s ease-in-out;
+    }
+
+</style>
