@@ -193,18 +193,18 @@
         </div>
     </main>
     <!-- Table Popup component goes here -->
-    <TableSelection IsOpen="@ShowTableSelection" 
+    @* <TableSelection IsOpen="@ShowTableSelection" 
                     IsOpenChanged="OnTableSelectionChanged"
                     OutletId="@outletId"
                     BillGenrate="BillGen"
-                    OnTableSelected="HandleTableSelected" />
+                    OnTableSelected="HandleTableSelected" /> *@
 
     <QuickActions IsOpen="@ShowQuickAction"
                   IsOpenChanged="OnActionPopupChanged"
                   OnActionSelected="HandleActionSelected" /> <!-- NEW: Bind the new callback -->
 
     <Footer CartCount="@cartCount"
-            tableNo=""
+            tableNo="@tableNo"
             OnHomeClick="HomePage"
             OnTableClick="LoadTableData"
             OnOrderTypeClick="ShowOrderTypeModal"
@@ -231,6 +231,7 @@
     protected override async Task OnInitializedAsync()
     {
         CartState.OnCartChanged += UpdateCartCount;
+        TableSelectionService.OnTableSelected += UpdateTableNo; 
         UpdateCartCount();
     }
 
@@ -319,6 +320,12 @@
         TableSelectionService.TriggerTableSelected();
     }
 
+    private void UpdateTableNo()
+    {
+        tableNo = TableSelectionService?.SelectedTable?.RmscCod;
+        StateHasChanged();
+    }
+
     private void ShowCart()
     {
         CartState.TriggerToggleCart();
@@ -333,5 +340,6 @@
     public void Dispose()
     {
         CartState.OnCartChanged -= UpdateCartCount;
+        TableSelectionService.OnTableSelected -= UpdateTableNo;
     }
 }

@@ -9,14 +9,15 @@ namespace HandHelUi.Shared.Services
         //public float CurrentGroupIndex { get; set; }
         public PfbRmscMst? SelectedTable { get; set; }
         public event Action? RequestTableSelected;
+        public event Action? OnTableSelected;
         public void TriggerTableSelected()
         {
             RequestTableSelected?.Invoke();
         }
-
-        //public void GetTabDetails()
-        //{
-
-        //}
+        public void SelectTable(PfbRmscMst table)
+        {
+            SelectedTable = table;
+            OnTableSelected?.Invoke();
+        }
     }
 }

@@ -1,8 +1,10 @@
 ﻿@using HandHelUi.Shared.Models
+@using HandHelUi.Shared.Services
 @using Microsoft.AspNetCore.Components
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject UserState UserState
+@inject TableSelectionService TableSelectionService
 @using HandHeldUi.Shared.Services 
 
 @if (IsOpen)
@@ -108,6 +110,7 @@
     private async Task SelectTable(PfbRmscMst table)
     {
         await OnTableSelected.InvokeAsync(table);
+        TableSelectionService.SelectTable(table);
         ClosePopup();
     }
 }
