@@ -333,7 +333,7 @@
 
     private void UpdateCartCount()
     {
-        cartCount = CartState.CartItems.Sum(i => i.Qty);
+        cartCount = CartState.CartItems.GroupBy(i => i.ItemCode).Count();
         StateHasChanged();
     }
 

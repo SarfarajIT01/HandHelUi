@@ -51,7 +51,6 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-
     [Parameter] public EventCallback<StewardModel?> OnStewardSelected { get; set; }
 
     private bool IsLoading { get; set; } = true;

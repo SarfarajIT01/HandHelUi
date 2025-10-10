@@ -2,11 +2,15 @@
 @inject CartState CartState
 @using HandHeldUi.Shared.Services
 @using HandHelUi.Shared.Models
+@using static HandHelUi.Shared.Pages.Components.Steword
+@inject IJSRuntime JS
+@inject HttpClient Http
+
 <div class="cart-overlay @(IsOpen ? "open" : "")">
     <div class="cart-container shadow-lg">
         <!-- Header -->
         <div class="cart-header d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0">Your Cart</h5>
+            <h5 class="fw-bold mb-0">ITEMS</h5>
             <img src="_content/HandHelUi.Shared/assets/img/csat_logo.png" style="width: 70px;" alt="Logo" />
             <button class="btn btn-close-modern" @onclick="Toggle" title="Close Cart">
                 <i class="bi bi-x-lg"></i>
@@ -19,7 +23,7 @@
             {
                 @foreach (var item in CartItems)
                 {
-                    <div class="cart-item d-flex justify-content-between align-items-center p-3 mb-3 rounded shadow-sm">
+                    <div class="cart-item d-flex justify-content-between align-items-center p-1 mb-2 rounded shadow-sm">
                         <div>
                             <h6 class="fw-semibold mb-1">@item.Name</h6>
                             <small class="text-muted">₹ @item.Price</small>
@@ -39,13 +43,44 @@
                     {
                         <div class="ms-3 mb-2">
                             <small class="text-secondary d-block mb-1">Customizations:</small>
-                            @foreach (var subItem in item.CartSubItem)
+                            @* @foreach (var subItem in item.CartSubItem)
                             {
                                 <div class="d-flex justify-content-between align-items-center small border-start ps-2">
                                     <span>@subItem.SubItemName</span>
                                     <span class="text-danger">₹ @subItem.SubItemRates</span>
                                 </div>
+                            } *@
+                            
+                            @* first design *@
+                            @* @foreach (var subItem in item.CartSubItem)
+                            {
+                                <div class="d-flex justify-content-between align-items-center small border-start ps-2">
+                                    <div class="d-flex flex-column">
+                                        <span>@subItem.SubItemName</span>
+                                        <small class="text-muted">₹ @subItem.SubItemRates</small>
+                                    </div>
+
+                                    <button class="btn-remove-subitem ms-2" @onclick="() => RemoveSubItem(item, subItem)" title="Remove">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </div>
+                            } *@
+
+
+                            @* second design *@
+                            @foreach (var subItem in item.CartSubItem)
+                            {
+                                <div class="d-flex justify-content-between align-items-center small border-start ps-2 subitem-line">
+                                    <div class="d-flex flex-column">
+                                        <span>@subItem.SubItemName</span>
+                                        <small class="text-muted">₹ @subItem.SubItemRates</small>
+                                    </div>
+                                    <button class="btn btn-remove-subitem" @onclick="() => RemoveSubItem(item, subItem)" title="Remove">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </div>
                             }
+
                         </div>
                     }
                 }
@@ -59,27 +94,67 @@
             }
         </div>
 
-        <!-- Footer -->
+        @*  Cart Footer with Expandable Order Details *@
         <div class="cart-footer p-3 border-top">
-            <div class="d-flex justify-content-between mb-2">
+
+            <!-- Toggle Button Above HR -->
+            <div class="text-center mb-2">
+                <button class="btn btn-details-toggle" @onclick="ToggleOrderDetails">
+                    @(ShowOrderDetails ? "Hide Other Details ▲" : "Show Other Details ▼")
+                </button>
+            </div>
+
+            <!-- Collapsible Order Details Section -->
+            <div class="order-details-panel @(ShowOrderDetails ? "show" : "")">
+                <div class="order-details-inner">
+                    <div class="d-flex borderBottom justify-content-between mb-2">
+                        <span>Steward</span> <strong><a>@SelectedSteward?.EmpName</a></strong>
+                        @* <span>Steward</span> <strong><a>@stewards.</a></strong> *@
+                    </div>
+                    <div class="d-flex borderBottom justify-content-between mb-2">
+                        <span>Cover</span> <strong><a>@SelectedCovor</a></strong>
+                    </div>
+                    <div class="d-flex borderBottom justify-content-between mb-2">
+                        <span>Order Type</span> <strong><a>Complementary</a></strong>
+                    </div>
+                    <div class="d-flex borderBottom justify-content-between mb-2">
+                        <span>Guest</span> <strong><a>Sarfaraj</a></strong>
+                    </div>
+                    <div class="d-flex borderBottom justify-content-between mb-2">
+                        <span>Order Remark</span> <strong><a>Special</a></strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <hr class="my-2" />
+
+            <!-- Item Details -->
+            <div class="d-flex justify-content-between">
                 <span>Subtotal</span> <strong>₹ 3250</strong>
             </div>
-            <div class="d-flex justify-content-between mb-2">
+            <div class="d-flex justify-content-between">
                 <span>Tax</span> <strong>₹ 50</strong>
             </div>
-            <div class="d-flex justify-content-between mb-2">
+            <div class="d-flex justify-content-between">
                 <span>Discount</span> <strong>₹ 50</strong>
             </div>
 
             <hr class="my-2" />
 
-            <div class="d-flex justify-content-between mb-3">
+            <!-- Total -->
+            <div class="d-flex justify-content-between">
                 <h5 class="fw-bold">Total</h5>
                 <h5 class="fw-bold text-success">
                     ₹ @(CartItems.Sum(x => x.Price * x.Qty) + CartItems.SelectMany(x => x.CartSubItem).Sum(x => x.SubItemRates ?? 0))
                 </h5>
             </div>
 
+            @if (IsCheckoutDisabled && CartItems.Any())
+            {
+                <div class="alert alert-danger text-center mb-2 p-1" role="alert"> @GetDisableReason() </div>
+            }
+            <!-- Checkout Button -->
             <button class="btn btn-modern-gradient w-100 py-2 fs-6" @onclick="CheckoutClicked" disabled="@IsCheckoutDisabled">
                 Proceed to Checkout
             </button>
@@ -97,6 +172,33 @@
     [Parameter] public EventCallback<CartItem> OnDecreaseQty { get; set; }
     [Parameter] public EventCallback OnCheckout { get; set; }
     [Parameter] public List<MenuItem> MenuItems { get; set; } = new(); // Added to access sub-item MinQty
+    
+    [Parameter] public StewardModel? SelectedSteward { get; set; }
+    [Parameter] public short SelectedCovor { get; set; } = 1;
+
+    private bool ShowOrderDetails = false;
+
+    private List<Steword.StewardModel>? stewards;
+    // private List<StewardModel>? stewards { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            stewards = await Http.GetFromJsonAsync<List<Steword.StewardModel>>("api/CSATSU_RMS_GetStiwards");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching stewards: {ex.Message}");
+        }
+    }
+
+
+    private void ToggleOrderDetails()
+    {
+        ShowOrderDetails = !ShowOrderDetails;
+    }
 
     private bool IsCheckoutDisabled => !CartItems.Any() || HasSubItemMinQtyViolation();
 
@@ -231,6 +333,97 @@
         CartState.DecreaseItemQty(parentItem.Name, subItem.SubItemName);
     }
 }
+
+<style>
+    /* ===== Cart Footer Section ===== */
+    .cart-footer {
+        background-color: #fff;
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        position: relative;
+    }
+
+    /* ===== Toggle Button ===== */
+    .btn-details-toggle {
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 25px;
+        padding: 6px 16px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #333;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+
+        .btn-details-toggle:hover {
+            background: #f8f9fa;
+            transform: scale(1.05);
+        }
+
+    /* ===== Order Details Panel (Hidden by Default) ===== */
+    .order-details-panel {
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.4s ease-in-out;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 8px;
+    }
+
+        /* ===== Visible State ===== */
+        .order-details-panel.show {
+            max-height: 300px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+    /* ===== Inner Content ===== */
+    .order-details-inner {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+        .order-details-inner a {
+            color: #111;
+            text-decoration: none;
+        }
+
+            .order-details-inner a:hover {
+                text-decoration: underline;
+            }
+
+    /* ===== Modern Gradient Checkout Button ===== */
+    .btn-modern-gradient {
+        background: linear-gradient(90deg, #007bff, #00c6ff);
+        color: white;
+        border: none;
+        border-radius: 30px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+
+        .btn-modern-gradient:hover {
+            background: linear-gradient(90deg, #0062cc, #00aaff);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+    /* ===== Hide Scrollbar But Keep Scrolling Functional ===== */
+    ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+
+    .borderBottom {
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+    }
+</style>
 <style>
     .cart-overlay {
         position: fixed;
@@ -259,10 +452,16 @@
     }
 
     .cart-header {
-        padding: 16px 20px;
+        /* padding: 16px 20px;
         background: linear-gradient(135deg, #f6f7fb, #ffffff);
         border-bottom: 1px solid #eee;
-        border-radius: 20px 0 0 0;
+        border-radius: 20px 0 0 0; */
+
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: #fff;
+        padding: 12.5px 16px;
+        border-top-left-radius: 10px;
+        /* border-top-right-radius: 10px; */
     }
 
     .btn-close-modern {
@@ -358,4 +557,60 @@
             background: linear-gradient(135deg, #ee0979, #ff6a00);
         }
 
+
+        /* first design */
+    /* ===== Sub-item Remove Icon ===== */
+    /* .btn-remove-subitem {
+        background: transparent;
+        border: none;
+        color: #dc3545;
+        font-size: 1.1rem;
+        padding: 2px 4px;
+        border-radius: 50%;
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+    }
+
+        .btn-remove-subitem:hover {
+            background-color: #dc3545;
+            color: #fff;
+            transform: scale(1.1);
+        } */
+
+
+    /* second design */
+    /* ===== Sub-item Remove Button ===== */
+    .subitem-line {
+        position: relative;
+        padding-right: 8px;
+        background: #fff;
+        border-radius: 6px;
+        margin-bottom: 4px;
+        transition: background 0.3s ease;
+    }
+
+        .subitem-line:hover {
+            background: #f9f9f9;
+        }
+
+    .btn-remove-subitem {
+        background: transparent;
+        border: none;
+        color: #dc3545;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+    }
+
+        .btn-remove-subitem:hover {
+            color: #fff;
+            background: #dc3545;
+            transform: scale(1.1);
+        }
+
 </style>
+

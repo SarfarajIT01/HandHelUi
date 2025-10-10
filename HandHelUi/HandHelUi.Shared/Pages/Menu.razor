@@ -183,9 +183,11 @@
           OnIncreaseQty="IncreaseQty"
           OnDecreaseQty="DecreaseQty"
           OnCheckout="@PlaceOrder"
-          MenuItems="@CurrentMenuItems" />
+          MenuItems="@CurrentMenuItems" 
+          SelectedSteward ="@SelectedSteward"
+          SelectedCovor ="@SelectedCovor" />
 
-<!-- Table Component -->
+<!-- Table Component --> 
 <TableSelection IsOpen="@ShowTablePopup"
                 IsOpenChanged="OnTablePopupChanged"
                 OnTableSelected="HandleTableSelected"
@@ -220,24 +222,7 @@
             SelectedMenuItem = null;
     }
 
-    private short SelectedCovor { get; set; } = 1;
-
-    // private void HandleCovorConfirmed(short quantity)
-    // {
-    //     SelectedCovor = quantity;
-    //     Console.WriteLine($"Quantity Selected: {quantity}");
-    // }
-
-    // private void HandleStewardSelected(StewardModel? steward)
-    // {
-    //     SelectedSteward = steward;
-
-    //     if (RmsCovkot == "y" && SelectedCovor == 1 && SelectedTable?.RmscTblsts != "K")
-    //     {
-    //         ShowCovorPopup = true;
-    //     }
-    //     Console.WriteLine($"Steward selected: {steward?.EmpName}");
-    // }
+    
 
     private void HandleStewardSelected(StewardModel? steward)
     {
@@ -285,19 +270,6 @@
     }
 
 
-    // private async Task SaveSelectionToLocalStorage()
-    // {
-    //     var selection = new TableStewardSelection
-    //     {
-    //         SelectedSteward = SelectedSteward,
-    //         SelectedTable = SelectedTable,
-    //         SelectedCovor = SelectedCovor
-    //     };
-
-    //     var selectionJson = JsonSerializer.Serialize(selection);
-    //     await JS.InvokeVoidAsync("localStorage.setItem", "tableStewardSelection", selectionJson);
-    // }
-
     public class TableStewardSelection
     {
         public string? TableCode { get; set; }   // unique key
@@ -305,14 +277,6 @@
         public PfbRmscMst? SelectedTable { get; set; }
         public short SelectedCovor { get; set; }
     }
-
-
-    // public class TableStewardSelection
-    // {
-    //     public StewardModel? SelectedSteward { get; set; }
-    //     public PfbRmscMst? SelectedTable { get; set; }
-    //     public short SelectedCovor { get; set; } 
-    // }
 
 }
 
@@ -339,6 +303,7 @@
     private PfbRmscMst? SelectedTable { get; set; }
     private float Total => CartState.CartItems.Sum(x => x.Price * x.Qty);
     private StewardModel? SelectedSteward { get; set; }
+    private short SelectedCovor { get; set; } = 1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -536,6 +501,7 @@
                 SelectedSteward = savedSelection.SelectedSteward;
                 SelectedTable = savedSelection.SelectedTable;
                 SelectedCovor = savedSelection.SelectedCovor;
+                StateHasChanged();
             }
             else
             {
