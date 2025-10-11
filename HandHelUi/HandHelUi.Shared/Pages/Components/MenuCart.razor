@@ -107,21 +107,104 @@
             <!-- Collapsible Order Details Section -->
             <div class="order-details-panel @(ShowOrderDetails ? "show" : "")">
                 <div class="order-details-inner">
-                    <div class="d-flex borderBottom justify-content-between mb-2">
-                        <span>Steward</span> <strong><a>@SelectedSteward?.EmpName</a></strong>
-                        @* <span>Steward</span> <strong><a>@stewards.</a></strong> *@
+
+                    <!-- Steward -->
+                    <div class="position-relative">
+                        <div class="d-flex borderBottom justify-content-between steward-row" @onclick="ToggleStewardPopup">
+                            <span>Steward</span>
+                            <strong><a>@(SelectedSteward?.EmpName ?? "Select Steward")</a></strong>
+                        </div>
+
+                        @if (ShowStewardPopup)
+                        {
+                            <div class="steward-popup">
+                                <div class="steward-popup-header d-flex justify-content-between align-items-center">
+                                    <h6 class="fw-bold mb-0">Select Steward</h6>
+                                    <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="ToggleStewardPopup">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                                <hr class="my-2" />
+                                <div class="steward-list">
+                                    @foreach (var steward in stewards)
+                                    {
+                                        <div class="steward-item" @onclick="() => SelectSteward(steward)">
+                                            @steward.EmpName (@steward.EmpCode)
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
-                    <div class="d-flex borderBottom justify-content-between mb-2">
-                        <span>Cover</span> <strong><a>@SelectedCovor</a></strong>
+
+                    <!-- Cover -->
+                    <div class="d-flex borderBottom justify-content-between" @onclick="() => IsEditingCover = true">
+                        <span>Cover</span>
+
+                        @if (IsEditingCover)
+                        {
+                            <input type="number" class="form-control form-control-sm w-25"
+                                   value="@SelectedCovor"
+                                   @onchange="OnCoverChanged"
+                                   @onblur="() => IsEditingCover = false" />
+                        }
+                        else
+                        {
+                            <strong>
+                                <a>@SelectedCovor</a>
+                            </strong>
+                        }
                     </div>
-                    <div class="d-flex borderBottom justify-content-between mb-2">
-                        <span>Order Type</span> <strong><a>Complementary</a></strong>
+
+                    <!-- Order Type -->
+                    <div class="d-flex borderBottom justify-content-between" @onclick="ToggleOrderType">
+                        <span>Order Type</span>
+                        <strong><a>@(SelectedOrderType)</a></strong>
                     </div>
-                    <div class="d-flex borderBottom justify-content-between mb-2">
+
+                    @if (ShowOrderTypePopup)
+                    {
+                        <div class="steward-popup">
+                            <div class="steward-popup-header d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0">Select Order Type</h6>
+                                <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="ToggleOrderType">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            <hr class="my-2" />
+
+                            <div class="steward-list">
+                                <div class="steward-item" @onclick='() => SelectOrderType(" Guest")'>
+                                    Guest
+                                </div>
+                                <div class="steward-item" @onclick='() => SelectOrderType(" Complementary")'>
+                                    Complementary
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                 
+
+                    <!-- Guest -->
+                    <div class="d-flex borderBottom justify-content-between">
                         <span>Guest</span> <strong><a>Sarfaraj</a></strong>
                     </div>
-                    <div class="d-flex borderBottom justify-content-between mb-2">
-                        <span>Order Remark</span> <strong><a>Special</a></strong>
+
+                    <!-- Order Remark -->
+                    <div class="d-flex borderBottom justify-content-between" @onclick="() => IsEditingRemark = true">
+                        <span>Order Remark</span>
+                        @if (IsEditingRemark)
+                        {
+                            <input type="text" class="form-control form-control-sm w-50"
+                                   @bind="OrderRemark"
+                                   @onblur="() => IsEditingRemark = false" />
+                        }
+                        else
+                        {
+                            <strong><a>@OrderRemark</a></strong>
+                        }
                     </div>
                 </div>
             </div>
@@ -163,6 +246,31 @@
 </div>
 
 
+@code {
+    private bool IsEditingCover = false;
+    private bool IsEditingRemark = false;
+
+    private string OrderRemark { get; set; } = "No Remark";
+
+    
+
+    private async Task OnCoverChanged(ChangeEventArgs e)
+    {
+        if (short.TryParse(e.Value?.ToString(), out var cover))
+        {
+            // SelectedCovor = cover;
+            await SelectCover(cover);
+        }
+    }
+
+    private async Task SelectCover(short cover)
+    {
+        await UpdateCover.InvokeAsync(cover);
+        IsEditingCover = false;
+    }
+ 
+   
+}
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -172,14 +280,51 @@
     [Parameter] public EventCallback<CartItem> OnDecreaseQty { get; set; }
     [Parameter] public EventCallback OnCheckout { get; set; }
     [Parameter] public List<MenuItem> MenuItems { get; set; } = new(); // Added to access sub-item MinQty
-    
-    [Parameter] public StewardModel? SelectedSteward { get; set; }
+
+
+
     [Parameter] public short SelectedCovor { get; set; } = 1;
 
     private bool ShowOrderDetails = false;
 
+    [Parameter] public StewardModel? SelectedSteward { get; set; }
+    [Parameter] public EventCallback<StewardModel> UpdateSteword { get; set; }
+    [Parameter] public EventCallback<short> UpdateCover { get; set; }
+    [Parameter] public EventCallback<string> OrderType { get; set; }
+
     private List<Steword.StewardModel>? stewards;
-    // private List<StewardModel>? stewards { get; set; }
+    private string? SelectedOrderType = "GUEST";
+
+
+    private bool ShowStewardPopup = false;
+    private bool ShowOrderTypePopup = false;
+
+    private void ToggleStewardPopup()
+    {
+        ShowStewardPopup = !ShowStewardPopup;
+    }
+
+    private async void SelectSteward(Steword.StewardModel steward)
+    {
+        await UpdateSteword.InvokeAsync(steward);
+        ShowStewardPopup = false;
+    }
+
+    private void ToggleOrderType()
+    {
+        ShowOrderTypePopup = !ShowOrderTypePopup;
+    }
+
+    private async void SelectOrderType(string type)
+    {
+        await OrderType.InvokeAsync(type);
+        SelectedOrderType = type;
+        ShowOrderTypePopup = false;
+    }
+
+   
+
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -371,7 +516,8 @@
         transition: all 0.4s ease-in-out;
         background: #fff;
         border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.10);
+        /* box-shadow: 0 5px 15px rgba(0, 0, 0, 0.10); */
         margin-bottom: 8px;
     }
 
@@ -384,8 +530,10 @@
 
     /* ===== Inner Content ===== */
     .order-details-inner {
-        padding: 10px 12px;
+        padding: 8px 0 0 0;
+        /* padding: 10px 12px; */
         font-size: 0.9rem;
+        
     }
 
         .order-details-inner a {
@@ -393,9 +541,35 @@
             text-decoration: none;
         }
 
-            .order-details-inner a:hover {
-                text-decoration: underline;
+        /* .order-details-inner .borderBottom {
+            cursor: pointer;
+        } */
+
+        .order-details-inner .borderBottom {
+            cursor: pointer;
+            transition: all 0.25s ease;
+            border-radius: 6px;
+            padding: 6px 8px;
+        }
+
+            .order-details-inner .borderBottom:hover {
+                background: #f1f3f5; /* light neutral hover */
+                transform: translateX(4px);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
             }
+
+
+            .order-details-inner .borderBottom:hover a {
+                color: #007bff;
+                
+                /* text-decoration: underline !important; */
+            }
+       
+
+
+
+         
+      
 
     /* ===== Modern Gradient Checkout Button ===== */
     .btn-modern-gradient {
@@ -611,6 +785,64 @@
             background: #dc3545;
             transform: scale(1.1);
         }
+
+    /* ===== Steward Popup ===== */
+    .steward-popup {
+        /* position: absolute; /* Changed from fixed */ */
+        top: 100%; /* Appears below the trigger row */
+        left: 0;
+        width: 100%;
+        /* margin-left: 11px; */
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        /* padding: 12px; */
+        padding: 6px 12px 0 12px;
+        z-index: 1050;
+        animation: fadeInUp 0.3s ease;
+        /* max-height: 220px; */
+        overflow-y: auto;
+    }
+
+    /* Popup header */
+    .steward-popup-header h6 {
+        font-size: 0.95rem;
+        color: #333;
+    }
+
+    /* Steward list items */
+    .steward-list {
+        max-height: 160px;
+        overflow-y: auto;
+    }
+
+    .steward-item {
+        padding: 8px 10px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+        .steward-item:hover {
+            background: #f8f9fa;
+            transform: translateX(3px);
+        }
+
+    /* Smooth fade animation */
+    @@keyframes fadeInUp {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
 
 </style>
 
