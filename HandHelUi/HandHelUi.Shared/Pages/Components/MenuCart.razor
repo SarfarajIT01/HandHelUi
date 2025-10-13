@@ -159,7 +159,7 @@
                     <!-- Order Type -->
                     <div class="d-flex borderBottom justify-content-between" @onclick="ToggleOrderType">
                         <span>Order Type</span>
-                        <strong><a>@(SelectedOrderType)</a></strong>
+                        <strong><a>@SelectedOrderType</a></strong>
                     </div>
 
                     @if (ShowOrderTypePopup)
@@ -175,10 +175,10 @@
                             <hr class="my-2" />
 
                             <div class="steward-list">
-                                <div class="steward-item" @onclick='() => SelectOrderType(" Guest")'>
+                                <div class="steward-item" @onclick='() => SelectOrderType(" GUEST")'>
                                     Guest
                                 </div>
-                                <div class="steward-item" @onclick='() => SelectOrderType(" Complementary")'>
+                                <div class="steward-item" @onclick='() => SelectOrderType(" COMPLEMENTARY")'>
                                     Complementary
                                 </div>
                             </div>
@@ -191,6 +191,27 @@
                     <div class="d-flex borderBottom justify-content-between">
                         <span>Guest</span> <strong><a>Sarfaraj</a></strong>
                     </div>
+
+                    @if (ShowStewardPopup)
+                    {
+                        <div class="steward-popup">
+                            <div class="steward-popup-header d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0">Select Steward</h6>
+                                <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="ToggleStewardPopup">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <hr class="my-2" />
+                            <div class="steward-list">
+                                @foreach (var steward in stewards)
+                                {
+                                    <div class="steward-item" @onclick="() => SelectSteward(steward)">
+                                        @steward.EmpName (@steward.EmpCode)
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
 
                     <!-- Order Remark -->
                     <div class="d-flex borderBottom justify-content-between" @onclick="() => IsEditingRemark = true">
@@ -284,16 +305,17 @@
 
 
     [Parameter] public short SelectedCovor { get; set; } = 1;
+    [Parameter] public string? SelectedOrderType { get; set; }
 
     private bool ShowOrderDetails = false;
 
     [Parameter] public StewardModel? SelectedSteward { get; set; }
     [Parameter] public EventCallback<StewardModel> UpdateSteword { get; set; }
     [Parameter] public EventCallback<short> UpdateCover { get; set; }
-    [Parameter] public EventCallback<string> OrderType { get; set; }
+    [Parameter] public EventCallback<string> UudateOrderType { get; set; }
 
     private List<Steword.StewardModel>? stewards;
-    private string? SelectedOrderType = "GUEST";
+    // private string? SelectedOrderType = "GUEST";
 
 
     private bool ShowStewardPopup = false;
@@ -317,8 +339,8 @@
 
     private async void SelectOrderType(string type)
     {
-        await OrderType.InvokeAsync(type);
-        SelectedOrderType = type;
+        await UudateOrderType.InvokeAsync(type);
+        // SelectedOrderType = type;
         ShowOrderTypePopup = false;
     }
 

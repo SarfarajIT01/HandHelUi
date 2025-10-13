@@ -1,0 +1,227 @@
+﻿@using Microsoft.AspNetCore.Components
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+@if (IsOpen)
+{
+    <div class="table-modal-overlay">
+        <div class="table-modal-content">
+            <div class="table-modal-header">
+                <h5 class="fw-bold">Select Steward</h5>
+                <button class="btn-close" style="margin-top: -16px; margin-right: 4px;" @onclick="ClosePopup"></button>
+            </div>
+
+            <div class="table-grid">
+                @if (IsLoading)
+                {
+                    <div class="loader-container">
+                        <div class="loader"></div>
+                    </div>
+                }
+                else if (stewards?.Count > 0)
+                {
+                    @foreach (var steward in stewards)
+                    {
+                        <div class="steward-card"
+                             @onclick="() => SelectSteward(steward)">
+                            <div class="steward-avatar">
+                                @steward.EmpName?[0] <!-- first letter as avatar -->
+                            </div>
+                            <div class="steward-info">
+                                <div class="steward-name">@steward.EmpName</div>
+                                <div class="steward-code">Code: @steward.EmpCode</div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p>No stewards available.</p>
+                }
+            </div>
+
+            <div class="table-modal-footer">
+                <button class="btn-back cancel" @onclick="ClosePopup">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<StewardModel?> OnStewardSelected { get; set; }
+
+    private bool IsLoading { get; set; } = true;
+    private List<StewardModel>? stewards { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            stewards = await Http.GetFromJsonAsync<List<StewardModel>>("api/CSATSU_RMS_GetStiwards");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in OnInitializedAsync: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SelectSteward(StewardModel steward)
+    {
+        await OnStewardSelected.InvokeAsync(steward);
+        ClosePopup();
+    }
+
+    private void ClosePopup()
+    {
+        IsOpen = false;
+        IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    public class StewardModel
+    {
+        public string? EmpCode { get; set; }
+        public string? EmpName { get; set; }
+    }
+}
+
+
+
+<style>
+    .table-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+    }
+
+    .table-modal-content {
+        background: #fff;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 600px;
+        padding: 12px;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .table-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 8px;
+    }
+
+    .steward-card {
+        background: #fff;
+        color: #333;
+        border-radius: 15px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border: 1px solid #eee;
+    }
+
+        .steward-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            border-color: #4a90e2; /* highlight with blue on hover */
+        }
+
+    .steward-avatar {
+        width: 55px;
+        height: 55px;
+        border-radius: 50%;
+        @* background: linear-gradient(135deg, #ff416c, #ff4b2b); *@
+        background: linear-gradient(135deg, #ff003a, #e12200);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    .steward-info {
+        text-align: center;
+    }
+
+    .steward-name {
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 3px;
+        color: #222;
+    }
+
+    .steward-code {
+        font-size: 13px;
+        color: #777;
+    }
+
+    .table-modal-footer {
+        text-align: center;
+    }
+
+    .btn-back {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: #fff;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    /* Loader */
+    .loader-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+        grid-column: 1 / -1;
+    }
+
+    .loader {
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #ff4b2b;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        box-shadow: 0 0 15px rgba(255,75,43,0.4);
+    }
+
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+</style>

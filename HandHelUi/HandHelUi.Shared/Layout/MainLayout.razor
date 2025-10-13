@@ -193,15 +193,16 @@
         </div>
     </main>
     <!-- Table Popup component goes here -->
-    <TableSelection IsOpen="@ShowTableSelection" 
+    @* <TableSelection IsOpen="@ShowTableSelection" 
                     IsOpenChanged="OnTableSelectionChanged"
                     OutletId="@outletId"
                     BillGenrate="BillGen"
-                    OnTableSelected="HandleTableSelected" />
+                    OnTableSelected="HandleTableSelected" /> *@
 
     <QuickActions IsOpen="@ShowQuickAction"
                   IsOpenChanged="OnActionPopupChanged"
                   OnActionSelected="HandleActionSelected" /> <!-- NEW: Bind the new callback -->
+
 
     <Footer CartCount="@cartCount"
             tableNo="@tableNo"
@@ -277,7 +278,9 @@
         Navigation.NavigateTo($"/menu/{outletId}?posCode={posCode}", forceLoad: true);
     }
 
+    private void OnTableSelectionChanged(bool value) => ShowTableSelection = value; // NEW: Handle TableSelection close
     private void OnActionPopupChanged(bool value) => ShowQuickAction = value;
+    
 
     private async Task HandleActionSelected(string action) // NEW: Handle action from QuickActions
     {
@@ -289,10 +292,7 @@
         // Add more if-else for other actions if needed
     }
 
-    private void OnTableSelectionChanged(bool value) => ShowTableSelection = value; // NEW: Handle TableSelection close
 
-
-// @using System.Text.Json
 
     private async Task HandleTableSelected(PfbRmscMst selectedTable) // NEW: Handle selected table
     {
@@ -302,7 +302,7 @@
 
     private void ShowOrderTypeModal()
     {
-        // Show order type modal logic
+        TableSelectionService.TriggerSelectedOrderType();
     }
 
     private void ShowMenuModal()

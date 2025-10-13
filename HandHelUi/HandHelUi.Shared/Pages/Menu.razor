@@ -149,7 +149,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        /* z-index: 1050; /* upar rahe sab UI ke */ */
+        /* z-index: 1050; /* upar rahe sab UI ke */ 
     }
 
     .loaderrr {
@@ -171,6 +171,11 @@
 
     }
 </style>
+
+<OrderType IsOpen ="@ShowOrderType"
+           IsOpenChanged =OnOrderTypePopupChanged
+           OnTypeSelected ="@((type) => OrderType = type)"/>
+
 <!-- SubItem Component -->
 <MenuSubItem IsOpen="@ShowSubItemPopup"
              IsOpenChanged="OnSubItemPopupChanged"
@@ -185,8 +190,9 @@
           OnCheckout="@PlaceOrder"
           MenuItems="@CurrentMenuItems" 
           SelectedSteward ="@SelectedSteward"
-          SelectedCovor ="@SelectedCovor" 
-          OrderType ="@((type) => OrderType = type)"
+          SelectedCovor ="@SelectedCovor"
+          SelectedOrderType ="@OrderType"
+          UudateOrderType ="@((type) => OrderType = type)"
           UpdateSteword ="@((steward) => SelectedSteward = steward)"
           UpdateCover ="@((cover) => SelectedCovor = cover)" />
 
@@ -225,7 +231,7 @@
             SelectedMenuItem = null;
     }
 
-    
+
 
     private void HandleStewardSelected(StewardModel? steward)
     {
@@ -281,6 +287,15 @@
         public short SelectedCovor { get; set; }
     }
 
+
+    // private void HandleOrderTypeSelected(string type)
+    // {
+    //     OrderType = type;
+    //     StateHasChanged();
+    // }
+
+    private void OnOrderTypePopupChanged(bool value) => ShowOrderType = value;
+
 }
 
 @code {
@@ -307,7 +322,8 @@
     private float Total => CartState.CartItems.Sum(x => x.Price * x.Qty);
     private StewardModel? SelectedSteward { get; set; }
     private short SelectedCovor { get; set; } = 1;
-    private string? OrderType { get; set; }
+    private string? OrderType { get; set; } = "GUEST";
+    private bool ShowOrderType = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -325,6 +341,7 @@
         CartState.RequestToggleCart += HandleToggleCart;
         CartState.OnCartChanged += StateHasChanged;
         TableSelectionService.RequestTableSelected += LoadTableData;
+        TableSelectionService.RequestOrderTypeSelected += UpdateOrderType;
     }
 
     protected override async Task OnParametersSetAsync()
@@ -617,7 +634,7 @@
                 OrderNumber = GenerateOrderNumber(),
                 OutletId = OutletId ?? string.Empty,
                 PosCode = posCode,
-                OrderType = OrderType ?? "GUEST",
+                OrderType = OrderType?.ToUpper() ?? "GUEST",
                 PosName = CurrentMenuItems.First().PosName,
                 TableNumber = posCode == "001" ? SelectedTable?.RmscCod : null,
                 TotalAmount = CartState.CartItems.Sum(x => x.Price * x.Qty) +
@@ -691,11 +708,18 @@
         StateHasChanged();
     }
 
+    private void UpdateOrderType()
+    {
+        ShowOrderType = true;
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         CartState.RequestToggleCart -= HandleToggleCart;
         CartState.OnCartChanged -= StateHasChanged;
         TableSelectionService.RequestTableSelected -= LoadTableData;
+        TableSelectionService.RequestOrderTypeSelected -= UpdateOrderType;
     }
 
     

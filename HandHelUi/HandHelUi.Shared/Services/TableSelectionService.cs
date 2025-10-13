@@ -9,6 +9,7 @@ namespace HandHelUi.Shared.Services
         public PfbRmscMst? SelectedTable { get; set; }
         public event Action? RequestTableSelected;
         public event Action? OnTableSelected;
+        public event Action? RequestOrderTypeSelected;
         public void TriggerTableSelected()
         {
             RequestTableSelected?.Invoke();
@@ -17,6 +18,10 @@ namespace HandHelUi.Shared.Services
         {
             SelectedTable = table;
             OnTableSelected?.Invoke();
+        }
+        public void TriggerSelectedOrderType()
+        {
+            RequestOrderTypeSelected?.Invoke();
         }
     }
 }
