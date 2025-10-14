@@ -172,6 +172,7 @@
     }
 </style>
 
+<!-- Order Type Component -->
 <OrderType IsOpen ="@ShowOrderType"
            IsOpenChanged =OnOrderTypePopupChanged
            OnTypeSelected ="@((type) => OrderType = type)"/>
@@ -190,8 +191,10 @@
           OnCheckout="@PlaceOrder"
           MenuItems="@CurrentMenuItems" 
           SelectedSteward ="@SelectedSteward"
+          SelectedGuest="@selectedGuest"
           SelectedCovor ="@SelectedCovor"
           SelectedOrderType ="@OrderType"
+          UpdateRemark="@((Remark) => OrderRemark = Remark)"
           UudateOrderType ="@((type) => OrderType = type)"
           UpdateSteword ="@((steward) => SelectedSteward = steward)"
           UpdateCover ="@((cover) => SelectedCovor = cover)" />
@@ -212,6 +215,11 @@
        IsOpenChanged="@((val) => ShowCovorPopup = val)"
        Quantity="SelectedCovor"
        OnCoverConfirmed="HandleCovorConfirmed" />
+
+<!-- Guest Component -->
+<Guest IsOpen=@ShowGuestPopup
+       IsOpenChanged="@((val) => ShowGuestPopup = val)" 
+       OnGuestSelected ="@((guest) => selectedGuest = guest)" />
 
 @code {
     private bool ShowSubItemPopup = false;
@@ -315,12 +323,15 @@
     private string ActiveGroup { get; set; } = "FOOD";
     private string ActiveCategory { get; set; } = "";
     private string SearchTerm { get; set; } = "";
+    private string? OrderRemark { get; set; }
     private bool ShowTablePopup = false;
     private bool ShowStewardPopup = false;
     private bool ShowCovorPopup = false;
+    private bool ShowGuestPopup = false;
     private PfbRmscMst? SelectedTable { get; set; }
     private float Total => CartState.CartItems.Sum(x => x.Price * x.Qty);
     private StewardModel? SelectedSteward { get; set; }
+    private PfbGuestDto? selectedGuest { get; set; }
     private short SelectedCovor { get; set; } = 1;
     private string? OrderType { get; set; } = "GUEST";
     private bool ShowOrderType = false;
@@ -342,6 +353,8 @@
         CartState.OnCartChanged += StateHasChanged;
         TableSelectionService.RequestTableSelected += LoadTableData;
         TableSelectionService.RequestOrderTypeSelected += UpdateOrderType;
+        TableSelectionService.RequestGuestPopup += HandleGuestPopup;
+
     }
 
     protected override async Task OnParametersSetAsync()
@@ -631,19 +644,22 @@
 
             var order = new OrderItem
             {
+                OrderStatus = "K",
+                PosCode = posCode,
+                Date = DateTime.Now,
+                OrderRemark = OrderRemark,
+                GuestName = selectedGuest?.GName,
                 OrderNumber = GenerateOrderNumber(),
                 OutletId = OutletId ?? string.Empty,
-                PosCode = posCode,
-                OrderType = OrderType?.ToUpper() ?? "GUEST",
+                GuestCode = selectedGuest?.GuestCode,
+                StewardEmpId = SelectedSteward?.EmpCode,
                 PosName = CurrentMenuItems.First().PosName,
-                TableNumber = posCode == "001" ? SelectedTable?.RmscCod : null,
-                TotalAmount = CartState.CartItems.Sum(x => x.Price * x.Qty) +
-                              CartState.CartItems.SelectMany(x => x.CartSubItem).Sum(x => x.SubItemRates ?? 0),
-                Date = DateTime.Now,
-                OrderStatus = "K",
+                OrderType = OrderType?.ToUpper() ?? "GUEST",
                 TotalItems = CartState.CartItems.Count().ToString(),
                 Covor = SelectedCovor > 0 ? SelectedCovor : (short)1,
-                StewardEmpId = SelectedSteward?.EmpCode,
+                TableNumber = posCode == "001" ? SelectedTable?.RmscCod : null,
+                TotalAmount = CartState.CartItems.Sum(x => x.Price * x.Qty) +
+                CartState.CartItems.SelectMany(x => x.CartSubItem).Sum(x => x.SubItemRates ?? 0),
                 CartItem = CartState.CartItems.Select(ci => new CartItems
                 {
                     ItemName = ci.Name,
@@ -714,12 +730,19 @@
         StateHasChanged();
     }
 
+    private void HandleGuestPopup()
+    {
+        ShowGuestPopup = true;
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         CartState.RequestToggleCart -= HandleToggleCart;
         CartState.OnCartChanged -= StateHasChanged;
         TableSelectionService.RequestTableSelected -= LoadTableData;
         TableSelectionService.RequestOrderTypeSelected -= UpdateOrderType;
+        TableSelectionService.RequestGuestPopup -= HandleGuestPopup;
     }
 
     

@@ -1,10 +1,12 @@
 ﻿
 @inject CartState CartState
+@using HandHelUi.Shared.Services
 @using HandHeldUi.Shared.Services
 @using HandHelUi.Shared.Models
 @using static HandHelUi.Shared.Pages.Components.Steword
 @inject IJSRuntime JS
 @inject HttpClient Http
+@inject TableSelectionService TableSelectionService
 
 <div class="cart-overlay @(IsOpen ? "open" : "")">
     <div class="cart-container shadow-lg">
@@ -188,45 +190,27 @@
                  
 
                     <!-- Guest -->
-                    <div class="d-flex borderBottom justify-content-between">
-                        <span>Guest</span> <strong><a>Sarfaraj</a></strong>
+                    <div class="d-flex borderBottom justify-content-between" @onclick ="HandleGuestPopup">
+                        <span>Guest</span> <strong><a>@(SelectedGuest?.GName ?? "No Guest")</a></strong>
                     </div>
-
-                    @if (ShowStewardPopup)
-                    {
-                        <div class="steward-popup">
-                            <div class="steward-popup-header d-flex justify-content-between align-items-center">
-                                <h6 class="fw-bold mb-0">Select Steward</h6>
-                                <button class="btn btn-sm btn-outline-danger rounded-circle" @onclick="ToggleStewardPopup">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            </div>
-                            <hr class="my-2" />
-                            <div class="steward-list">
-                                @foreach (var steward in stewards)
-                                {
-                                    <div class="steward-item" @onclick="() => SelectSteward(steward)">
-                                        @steward.EmpName (@steward.EmpCode)
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
 
                     <!-- Order Remark -->
                     <div class="d-flex borderBottom justify-content-between" @onclick="() => IsEditingRemark = true">
                         <span>Order Remark</span>
+
                         @if (IsEditingRemark)
                         {
                             <input type="text" class="form-control form-control-sm w-50"
-                                   @bind="OrderRemark"
-                                   @onblur="() => IsEditingRemark = false" />
+                                   @bind="Remark"
+                                   @onblur="() => IsEditingRemark = false"
+                                   @onkeydown="HandleRemarkKeydown" />
                         }
                         else
                         {
-                            <strong><a>@OrderRemark</a></strong>
+                            <strong><a>@Remark</a></strong>
                         }
                     </div>
+
                 </div>
             </div>
 
@@ -271,9 +255,10 @@
     private bool IsEditingCover = false;
     private bool IsEditingRemark = false;
 
-    private string OrderRemark { get; set; } = "No Remark";
+    private string? Remark { get; set; } = "Add Remark";
+    [Parameter] public EventCallback<string> UpdateRemark { get; set; }
 
-    
+
 
     private async Task OnCoverChanged(ChangeEventArgs e)
     {
@@ -289,8 +274,20 @@
         await UpdateCover.InvokeAsync(cover);
         IsEditingCover = false;
     }
- 
-   
+
+    private void HandleGuestPopup()
+    {
+        TableSelectionService.TriggerGuestPopup();
+    }
+
+    private async Task HandleRemarkKeydown(KeyboardEventArgs e)
+{
+    if (e.Key == "Enter")
+    {
+        await UpdateRemark.InvokeAsync(Remark); 
+        IsEditingRemark = false;                     
+    }
+}
 }
 
 @code {
@@ -302,13 +299,12 @@
     [Parameter] public EventCallback OnCheckout { get; set; }
     [Parameter] public List<MenuItem> MenuItems { get; set; } = new(); // Added to access sub-item MinQty
 
-
-
     [Parameter] public short SelectedCovor { get; set; } = 1;
     [Parameter] public string? SelectedOrderType { get; set; }
 
     private bool ShowOrderDetails = false;
 
+    [Parameter] public PfbGuestDto? SelectedGuest { get; set; }
     [Parameter] public StewardModel? SelectedSteward { get; set; }
     [Parameter] public EventCallback<StewardModel> UpdateSteword { get; set; }
     [Parameter] public EventCallback<short> UpdateCover { get; set; }

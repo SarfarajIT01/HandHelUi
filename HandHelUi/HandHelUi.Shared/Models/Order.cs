@@ -20,8 +20,8 @@ namespace HandHelUi.Shared.Models
         public string? OrderNumber { get; set; }
         public string? OrderType { get; set; }
         public string? OrderStatus { get; set; }
-        public string? guest_code { get; set; }
-        public string? guest_name { get; set; }
+        public string? GuestCode { get; set; }
+        public string? GuestName { get; set; }
         public string? RSUM_BIL { get; set; }
         public short? Covor { get; set; }
         public string? RSUM_NAR { get; set; }
@@ -35,7 +35,7 @@ namespace HandHelUi.Shared.Models
         public string? RSUM_TIM { get; set; }
         public string? HH_DISC { get; set; }
         public string? RSUM_REMTYP { get; set; }
-        public string? RSUM_REM { get; set; }
+        public string? OrderRemark { get; set; }
         public string? TotalDisc { get; set; }
         public string? StewardEmpId { get; set; }
         public List<CartItems>? CartItem { get; set; }

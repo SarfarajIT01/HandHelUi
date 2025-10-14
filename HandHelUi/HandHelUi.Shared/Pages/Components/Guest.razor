@@ -1,4 +1,5 @@
-﻿@using Microsoft.AspNetCore.Components
+﻿@using HandHelUi.Shared.Models
+@using Microsoft.AspNetCore.Components
 @using System.Net.Http.Json
 @inject HttpClient Http
 
@@ -7,41 +8,95 @@
     <div class="table-modal-overlay">
         <div class="table-modal-content">
             <div class="table-modal-header">
-                <h5 class="fw-bold">Select Steward</h5>
-                <button class="btn-close" style="margin-top: -16px; margin-right: 4px;" @onclick="ClosePopup"></button>
+                <h5 class="fw-bold">@(!IsAddMode ? "Select Guest" : "Add New Guest")</h5>
+                <button class="btn-close" @onclick="ClosePopup"></button>
             </div>
 
-            <div class="table-grid">
-                @if (IsLoading)
-                {
-                    <div class="loader-container">
-                        <div class="loader"></div>
-                    </div>
-                }
-                else if (stewards?.Count > 0)
-                {
-                    @foreach (var steward in stewards)
+            @if (!IsAddMode)
+            {
+                <div class="search-container">
+                    <input type="text"
+                           placeholder="Search Guest..."
+                           @bind-value="SearchText"
+                           @bind-value:event="oninput" />
+                </div>
+
+                <div class="table-grid">
+                    @if (IsLoading)
                     {
-                        <div class="steward-card"
-                             @onclick="() => SelectSteward(steward)">
-                            <div class="steward-avatar">
-                                @steward.EmpName?[0] <!-- first letter as avatar -->
-                            </div>
-                            <div class="steward-info">
-                                <div class="steward-name">@steward.EmpName</div>
-                                <div class="steward-code">Code: @steward.EmpCode</div>
-                            </div>
+                        <div class="loader-container">
+                            <div class="loader"></div>
                         </div>
                     }
-                }
-                else
-                {
-                    <p>No stewards available.</p>
-                }
-            </div>
+                    else if (FilteredGuests.Any())
+                    {
+                        <div class="steward-card add-card" @onclick="() => IsAddMode = true">
+                            <div class="steward-avatar add-avatar">
+                                <i class="bi bi-person-plus-fill fs-3"></i>
+                            </div>
+                            <div class="steward-info">
+                                <div class="steward-name">Add New Guest</div>
+                            </div>
+                        </div>
 
-            <div class="table-modal-footer">
-                <button class="btn-back cancel" @onclick="ClosePopup">Cancel</button>
+                        @foreach (var guest in FilteredGuests)
+                        {
+                            <div class="steward-card" @onclick="() => SelectGuest(guest)">
+                                <div class="steward-avatar">
+                                    @guest.GName?[0]
+                                </div>
+                                <div class="steward-info">
+                                    <div class="steward-name">@guest.GName</div>
+                                    <div class="steward-code">@guest.GuestCode</div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="no-data">No guests found.</p>
+                    }
+                </div>
+            }
+            else
+            {
+                <EditForm Model="@NewGuest" OnValidSubmit="SaveGuest">
+                    <div class="form-container">
+                        <div class="form-group">
+                            <label>Guest Name</label>
+                            <input @bind="NewGuest.GName" placeholder="Enter guest name" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Guest No</label>
+                            <input @bind="NewGuest.GuestCode" placeholder="Enter guest no" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mobile No</label>
+                            <input @bind="NewGuest.Phone1" placeholder="Enter mobile no" type="tel" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Address 1</label>
+                            <input @bind="NewGuest.Add1" placeholder="Enter address line 1" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Address 2</label>
+                            <input @bind="NewGuest.Add2" placeholder="Enter address line 2" />
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-save">Save</button>
+                            <button type="button" class="btn-cancel" @onclick="() => IsAddMode = false">Cancel</button>
+                        </div>
+                    </div>
+                </EditForm>
+            }
+
+            <div class="table-modal-footer" style="@((IsAddMode ? "display:none;" : ""))">
+                <button class="btn-cancel" @onclick="ClosePopup">Back</button>
             </div>
         </div>
     </div>
@@ -50,21 +105,31 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public EventCallback<StewardModel?> OnStewardSelected { get; set; }
+    [Parameter] public EventCallback<PfbGuestDto?> OnGuestSelected { get; set; }
 
     private bool IsLoading { get; set; } = true;
-    private List<StewardModel>? stewards { get; set; }
+    private bool IsAddMode { get; set; } = false;
+    private string SearchText { get; set; } = string.Empty;
+    private List<PfbGuestDto>? Guests { get; set; }
+    private PfbGuestDto NewGuest { get; set; } = new();
+
+    private IEnumerable<PfbGuestDto> FilteredGuests =>
+        Guests?.Where(g =>
+            string.IsNullOrWhiteSpace(SearchText) ||
+            g.GName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+            g.GuestCode.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+        ?? Enumerable.Empty<PfbGuestDto>();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             IsLoading = true;
-            stewards = await Http.GetFromJsonAsync<List<StewardModel>>("api/CSATSU_RMS_GetStiwards");
+            Guests = await Http.GetFromJsonAsync<List<PfbGuestDto>>("api/CSATSU_RMS_GUEST");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in OnInitializedAsync: {ex.Message}");
+            Console.WriteLine($"Error loading guests: {ex.Message}");
         }
         finally
         {
@@ -72,29 +137,123 @@
         }
     }
 
-    private async Task SelectSteward(StewardModel steward)
+    private async Task SelectGuest(PfbGuestDto guest)
     {
-        await OnStewardSelected.InvokeAsync(steward);
+        await OnGuestSelected.InvokeAsync(guest);
         ClosePopup();
+    }
+
+    private async Task SaveGuest()
+    {
+        try
+        {
+            await Http.PostAsJsonAsync("api/CSATSU_RMS_GUEST", NewGuest);
+            Guests?.Add(NewGuest);
+            IsAddMode = false;
+            SearchText = string.Empty;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving guest: {ex.Message}");
+        }
     }
 
     private void ClosePopup()
     {
         IsOpen = false;
         IsOpenChanged.InvokeAsync(IsOpen);
-    }
-
-    public class StewardModel
-    {
-        public string? EmpCode { get; set; }
-        public string? EmpName { get; set; }
+        IsAddMode = false;
     }
 }
 
-
-
 <style>
-    .table-modal-overlay {
+    .form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 4px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.form-group input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border 0.2s ease;
+}
+
+.form-group input:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-save {
+    background: linear-gradient(90deg, #00b09b, #96c93d);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+
+   
+}
+
+.btn-save:hover {
+    background: linear-gradient(90deg, #00917a, #7dbd32);
+}
+
+.btn-cancel {
+    /* background: linear-gradient(90deg, #ff416c, #ff4b2b);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s; */
+
+
+
+    background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: #fff;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        cursor: pointer;
+}
+
+.btn-cancel:hover {
+    background: linear-gradient(90deg, #e03c59, #c2332c);
+}
+
+</style>
+
+
+<style > .table-modal-overlay {
         position: fixed;
         inset: 0;
         background: rgba(0,0,0,0.6);
@@ -102,6 +261,7 @@
         justify-content: center;
         align-items: center;
         z-index: 1050;
+        height: 100%;
     }
 
     .table-modal-content {
@@ -111,7 +271,10 @@
         max-width: 600px;
         padding: 12px;
         animation: fadeIn 0.3s ease-in-out;
+        /* min-height: 400px; */
+        /* max-height: 400px; */
     }
+  
 
     .table-modal-header {
         display: flex;
@@ -153,8 +316,10 @@
         width: 55px;
         height: 55px;
         border-radius: 50%;
-        @* background: linear-gradient(135deg, #ff416c, #ff4b2b); *@
-        background: linear-gradient(135deg, #ff003a, #e12200);
+        /* background: linear-gradient(135deg, #ff416c, #ff4b2b); */
+        /* background: linear-gradient(135deg, #ff003a, #e12200); */
+        /* background: linear-gradient(135deg, #4a90e2, #357ABD); */
+        background: #7b4bff;
         color: #fff;
         display: flex;
         align-items: center;
@@ -163,8 +328,31 @@
         font-weight: bold;
         margin-bottom: 10px;
         box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+
     }
 
+    .search-container {
+        margin-bottom: 10px;
+    }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+            .search-container input:focus {
+                border-color: #4a90e2;
+                box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+            }
+
+    .add-avatar {
+        background: linear-gradient(135deg, #00b09b, #96c93d);
+    }
     .steward-info {
         text-align: center;
     }
@@ -194,8 +382,8 @@
         font-weight: bold;
         cursor: pointer;
     }
-
     /* Loader */
+
     .loader-container {
         display: flex;
         justify-content: center;
@@ -223,5 +411,180 @@
             transform: rotate(360deg);
         }
     }
-
 </style>
+
+
+@* <style>
+    .table-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+    }
+
+    .table-modal-content {
+        background: #fff;
+        border-radius: 18px;
+        width: 90%;
+        max-width: 600px;
+        padding: 16px;
+        animation: fadeIn 0.3s ease-in-out;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .search-container {
+        margin-bottom: 10px;
+    }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+            .search-container input:focus {
+                border-color: #4a90e2;
+                box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+            }
+
+    .table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 8px;
+    }
+
+    .steward-card {
+        background: #fff;
+        color: #333;
+        border-radius: 15px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border: 1px solid #eee;
+    }
+
+        .steward-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+            border-color: #4a90e2;
+        }
+
+    .steward-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4a90e2, #357ABD);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .add-avatar {
+        background: linear-gradient(135deg, #00b09b, #96c93d);
+    }
+
+    .steward-info {
+        text-align: center;
+    }
+
+    .steward-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: #222;
+    }
+
+    .steward-code {
+        font-size: 13px;
+        color: #666;
+    }
+
+    .add-card .steward-name {
+        color: #007b55;
+    }
+
+    .table-modal-footer {
+        text-align: center;
+        margin-top: 15px;
+    }
+
+    .btn-back {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: #fff;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+        .btn-back:hover {
+            background: linear-gradient(90deg, #e03c59, #c2332c);
+        }
+
+    /* Loader */
+    .loader-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 180px;
+        grid-column: 1 / -1;
+    }
+
+    .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #4a90e2;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes spin {
+        0%
+
+    {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    .no-data {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: #666;
+        font-size: 0.95rem;
+    }
+
+</style> *@

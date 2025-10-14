@@ -10,6 +10,7 @@ namespace HandHelUi.Shared.Services
         public event Action? RequestTableSelected;
         public event Action? OnTableSelected;
         public event Action? RequestOrderTypeSelected;
+        public event Action? RequestGuestPopup;
         public void TriggerTableSelected()
         {
             RequestTableSelected?.Invoke();
@@ -22,6 +23,11 @@ namespace HandHelUi.Shared.Services
         public void TriggerSelectedOrderType()
         {
             RequestOrderTypeSelected?.Invoke();
+        }
+
+        public void TriggerGuestPopup()
+        {
+            RequestGuestPopup?.Invoke();
         }
     }
 }
