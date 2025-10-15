@@ -7,132 +7,138 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 
-<div class="bill-page">
-    <!-- Header -->
-    <div class="bill-header">
-        @if (tableDetails != null)
-        {
-            <div><strong>Bill No:</strong> @tableDetails.NextBill</div>
-            <div><strong>Time:</strong> @tableDetails.RSUM_TIM</div>
-            <div><strong>Table No:</strong> @tableDetails.RSUM_TBL</div>
-            <div><strong>Stw:</strong> @tableDetails.RSUM_STW</div>
-            <div><strong>Total Qty:</strong> @itemData?.Sum(r => r.RkotQty)</div>
-            <div><strong>Cvr:</strong> @tableDetails.RSUM_CVR</div>
-            <div><strong>User:</strong> @tableDetails.RSUM_CSH</div>
-        }
-    </div>
 
-    <!-- Orders Table -->
-    <div class="order-table">
-        <div class="order-row header">
-            <div>Order No</div>
-            <div>Item Name</div>
-            <div>Qty</div>
-            <div>Rate</div>
-            <div>Amt</div>
-        </div>
-        @if (itemData != null)
-        {
-            @foreach (var item in itemData)
+<div class="mainpage">
+    <div class="bill-page">
+        <!-- Header -->
+        <div class="bill-header">
+            @if (tableDetails != null)
             {
-                <div class="order-row">
-                    <div>@item.RkotNo</div>
-                    <div>@item.ItemName</div>
-                    <div style="margin-left:6px;">@item.RkotQty</div>
-                    <div>@item.RkotRat</div>
-                    <div>@item.FnlBaseVal</div>
+                <div><strong>Bill No:</strong> @tableDetails.NextBill</div>
+                <div><strong>Time:</strong> @tableDetails.RSUM_TIM</div>
+                <div><strong>Table No:</strong> @tableDetails.RSUM_TBL</div>
+                <div><strong>Stw:</strong> @tableDetails.RSUM_STW</div>
+                <div><strong>Total Qty:</strong> @itemData?.Sum(r => r.RkotQty)</div>
+                <div><strong>Cvr:</strong> @tableDetails.RSUM_CVR</div>
+                <div><strong>User:</strong> @tableDetails.RSUM_CSH</div>
+            }
+        </div>
+
+        <!-- Orders Table -->
+        <div class="order-table-container">
+            <div class="order-header">
+                <div>Order No</div>
+                <div>Item Name</div>
+                <div>Qty</div>
+                <div>Rate</div>
+                <div>Amt</div>
+            </div>
+            <div class="order-rows">
+
+                @if (itemData != null)
+                {
+                    @foreach (var item in itemData)
+                    {
+                        <div class="order-row">
+                            <div>@item.RkotNo</div>
+                            <div>@item.ItemName</div>
+                            <div style="margin-left:6px;">@item.RkotQty</div>
+                            <div>@item.RkotRat</div>
+                            <div>@item.FnlBaseVal</div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+
+        <!-- Test Charges + Summary -->
+        <div class="test-charges">
+            <!-- Left: Test Charge Options -->
+            <div class="charges-left">
+                <label><input type="checkbox" /> Test Charge 10%</label>
+                <label><input type="checkbox" /> Test Charge 5%</label>
+                <label><input type="checkbox" /> Test Charge 7%</label>
+                <label><input type="checkbox" /> Test Charge 0%</label>
+                <label class="custom-charge">
+                    <input type="checkbox" /> Custom
+                    <input type="number" min="0" value="0" /> %
+                </label>
+            </div>
+
+            @if (itemData != null)
+            {
+                <!-- Right: Summary -->
+                <div class="charges-summary">
+                    <div class="summary-row">
+                        <span>SubTotal</span>
+                        <span>@itemData.Sum(t => t.FnlBaseVal)</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Discount</span>
+                        <span>@discount</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Tax</span>
+                        <span>@itemData.Sum(tax => tax.RkotTax)</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total</span>
+                        <span>@itemData.Sum(tax => tax.RkotTax + tax.FnlBaseVal) - discount</span>
+                    </div>
                 </div>
             }
-        }
+        </div>
+
+        <!-- Actions -->
+        <div class="bill-actions">
+            <button class="secondary-btn">Others</button>
+            <button class="primary-btn" @onclick="() => GenerateBill()">Generate Bill</button>
+        </div>
+</div>
+<!-- Discount Remark Modal -->
+@if (showDiscountRemark)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="modal-title">Enter Discount Remark</h2>
+            <input type="text" @bind="discountReason" placeholder="Enter reason..." class="modal-input" />
+
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="CloseDiscountModal">Cancel</button>
+                <button class="btn-confirm" @onclick="ConfirmDiscount">Confirm</button>
+            </div>
+        </div>
     </div>
+}
 
-    <!-- Test Charges + Summary -->
-    <div class="test-charges">
-        <!-- Left: Test Charge Options -->
-        <div class="charges-left">
-            <label><input type="checkbox" /> Test Charge 10%</label>
-            <label><input type="checkbox" /> Test Charge 5%</label>
-            <label><input type="checkbox" /> Test Charge 7%</label>
-            <label><input type="checkbox" /> Test Charge 0%</label>
-            <label class="custom-charge">
-                <input type="checkbox" /> Custom
-                <input type="number" min="0" value="0" /> %
-            </label>
-        </div>
+<!-- Confirmation Modal -->
+@if (showConfirm)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="modal-title">Generate Bill</h2>
+            <p class="modal-text">Are you sure you want to generate bill?</p>
 
-        @if (itemData != null)
-        {
-            <!-- Right: Summary -->
-            <div class="charges-summary">
-                <div class="summary-row">
-                    <span>SubTotal</span>
-                    <span>@itemData.Sum(t => t.FnlBaseVal)</span>
-                </div>
-                <div class="summary-row">
-                    <span>Discount</span>
-                    <span>@discount</span>
-                </div>
-                <div class="summary-row">
-                    <span>Tax</span>
-                    <span>@itemData.Sum(tax => tax.RkotTax)</span>
-                </div>
-                <div class="summary-row total">
-                    <span>Total</span>
-                    <span>@itemData.Sum(tax => tax.RkotTax + tax.FnlBaseVal) - discount</span>
-                </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="() => { showConfirm = false; }">No</button>
+                <button class="btn-confirm" @onclick="GenBill">Yes</button>
             </div>
-        }
+        </div>
     </div>
-
-    <!-- Actions -->
-    <div class="bill-actions">
-        <button class="secondary-btn">Others</button>
-        <button class="primary-btn" @onclick="() => GenerateBill()">Generate Bill</button>
+}
+<!-- bill genrating Modal -->
+@if (isGenerating)
+{
+    <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-xl text-center">
+            <h3 class="text-lg font-bold">Generating Bill...</h3>
+            <div class="mt-3">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-4 border-blue-600 mx-auto"></div>
+            </div>
+        </div>
     </div>
-
-    <!-- Discount Remark Modal -->
-    @if (showDiscountRemark)
-    {
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <h2 class="modal-title">Enter Discount Remark</h2>
-                <input type="text" @bind="discountReason" placeholder="Enter reason..." class="modal-input" />
-
-                <div class="modal-actions">
-                    <button class="btn-cancel" @onclick="CloseDiscountModal">Cancel</button>
-                    <button class="btn-confirm" @onclick="ConfirmDiscount">Confirm</button>
-                </div>
-            </div>
-        </div>
-    }
-
-    <!-- Confirmation Modal -->
-    @if (showConfirm)
-    {
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <h2 class="modal-title">Generate Bill</h2>
-                <p class="modal-text">Are you sure you want to generate bill?</p>
-
-                <div class="modal-actions">
-                    <button class="btn-cancel" @onclick="() => { showConfirm = false; }">No</button>
-                    <button class="btn-confirm" @onclick="GenBill">Yes</button>
-                </div>
-            </div>
-        </div>
-    }
-    <!-- bill genrating Modal -->
-    @if (isGenerating)
-    {
-        <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div class="bg-white p-6 rounded-xl shadow-xl text-center">
-                <h3 class="text-lg font-bold">Generating Bill...</h3>
-                <div class="mt-3">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-4 border-blue-600 mx-auto"></div>
-                </div>
-            </div>
-        </div>
-    }
+}
 
 
 </div>
@@ -732,28 +738,141 @@
 
 
 <style scoped>
-    /* Test Charges Section with Grid */
-    .test-charges {
-        background: #fff;
-        padding: 20px;
-        border-radius: 10px;
-        margin-top: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        display: grid;
-        grid-template-columns: 2.5fr 1fr; /* Left bigger, right smaller */
-        /* grid-template-columns: 1.5fr 1fr; */
-        gap: 20px;
-        width: 100%;    
+    /* =========================
+       BASE PAGE STRUCTURE
+    ========================= */
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden; /* 🚫 disable page scroll */
+        font-family: 'Segoe UI', sans-serif;
+        background: #f9fafb;
+        color: #333;
     }
 
-    /* Left (Checkboxes) */
+    .bill-page {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 119px); 
+        padding: 15px;
+        box-sizing: border-box;
+        overflow: hidden; /* no main scroll */
+    }
+
+
+    /* =========================
+       HEADER SECTION
+    ========================= */
+    .bill-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #2563eb;
+        color: #fff;
+        padding: 14px 20px;
+        border-radius: 10px;
+        font-size: 15px;
+        flex-shrink: 0;
+        margin-bottom: 10px;
+    }
+
+    /* =========================
+       TABLE SECTION (scroll inside)
+    ========================= */
+    .order-table-container {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        overflow: hidden;
+        min-height: 0; /* 👈 necessary to allow inner scroll */
+    }
+
+    /* Fixed header row */
+    .order-header {
+        display: grid;
+        grid-template-columns: 1fr 2.3fr 0.7fr 0.7fr 0.4fr;
+        background: #f1f5f9;
+        font-weight: bold;
+        border-bottom: 2px solid #ddd;
+        padding: 12px;
+        flex-shrink: 0;
+    }
+
+    /* Scrollable item list */
+    .order-rows {
+        overflow-y: auto;
+        flex-grow: 1;
+        min-height: 0;
+    }
+
+    /* Individual rows */
+    .order-row {
+        display: grid;
+        grid-template-columns: 1fr 2.3fr 0.7fr 0.7fr 0.4fr;
+    }
+
+        .order-row > div {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            color: #333;
+        }
+
+    /* Zebra style + hover */
+    .order-rows .order-row:nth-child(odd) {
+        background-color: #f9fafc;
+    }
+
+    .order-rows .order-row:nth-child(even) {
+        background-color: #ffffff;
+    }
+
+    .order-rows .order-row:hover {
+        background-color: #eaf3ff;
+        transition: 0.2s;
+    }
+
+    /* Modern thin scrollbar */
+    .order-rows::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .order-rows::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .order-rows::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 8px;
+    }
+
+        .order-rows::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+    /* =========================
+       TEST CHARGES + SUMMARY
+    ========================= */
+    .test-charges {
+        background: #fff;
+        padding: 16px 20px;
+        border-radius: 10px;
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 2.5fr 1fr;
+        gap: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        flex-shrink: 0; /* 👈 prevent it from pushing down */
+    }
+
     .charges-left {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
-
 
         .charges-left label {
             font-size: 14px;
@@ -762,7 +881,6 @@
             gap: 6px;
         }
 
-    /* Right (Summary in 2-column format) */
     .charges-summary {
         background: #f9fafb;
         padding: 14px 18px;
@@ -776,7 +894,7 @@
 
     .summary-row {
         display: flex;
-        justify-content: space-between; /* label left, value right */
+        justify-content: space-between;
         font-weight: 500;
     }
 
@@ -787,115 +905,55 @@
             padding-top: 8px;
         }
 
-        .charges-summary p {
-            margin: 6px 0;
+    .test-charges .custom-charge input[type="number"] {
+        width: 60px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    /* =========================
+       ACTION BUTTONS
+    ========================= */
+    .bill-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 14px;
+        margin-top: 10px;
+        flex-shrink: 0;
+    }
+
+    .primary-btn, .secondary-btn {
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+    .primary-btn {
+        background: #2563eb;
+        color: white;
+    }
+
+        .primary-btn:hover {
+            background: #1e4fc3;
         }
 
-/* Page Layout */
-.bill-page {
-    width: 100%;
-    min-height: 150vh;
-    /* background: #f9fafb; */
-    padding: 20px;
-    font-family: 'Segoe UI', sans-serif;
-    color: #333;
-}
+    .secondary-btn {
+        background: #f3f4f6;
+        color: #333;
+    }
 
-/* Header */
-.bill-header {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    background: #2563eb;
-    color: #fff;
-    padding: 14px 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    font-size: 15px;
-}
+        .secondary-btn:hover {
+            background: white;
+        }
 
-/* Orders Table */
-.order-table {
-    display: grid;
-    grid-template-columns: 1fr 2.3fr 0.7fr 0.7fr 0.4fr;
-    /* grid-template-columns: 1fr 2fr 0.6fr 0.7fr 0.8fr; */
-    font-size: 14px;
-    background: #fff;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.order-row {
-    display: contents;
-}
-.order-row > div {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-}
-.order-row.header > div {
-    background: #f1f5f9;
-    font-weight: bold;
-    border-bottom: 2px solid #ddd;
-}
-
-/* Summary */
-.bill-summary {
-    display: flex;
-    justify-content: space-between;
-    margin: 20px 0;
-    padding: 16px 20px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    font-size: 15px;
-}
-
-.test-charges label {
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.test-charges .custom-charge input[type="number"] {
-    width: 60px;
-    padding: 4px 6px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-}
-
-/* Actions */
-.bill-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 14px;
-}
-.primary-btn, .secondary-btn {
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s ease;
-}
-.primary-btn {
-    background: #2563eb;
-    color: white;
-}
-.primary-btn:hover {
-    background: #1e4fc3;
-}
-.secondary-btn {
-    background: #f3f4f6;
-    color: #333;
-}
-.secondary-btn:hover {
-    /* background: #e5e7eb; */
-    background: white;
-}
-
-
-    /* Overlay */
+    /* =========================
+       MODAL
+    ========================= */
     .modal-overlay {
         position: fixed;
         inset: 0;
@@ -906,7 +964,6 @@
         z-index: 1000;
     }
 
-    /* Modal Box */
     .modal-content {
         background: #fff;
         border-radius: 14px;
@@ -918,7 +975,6 @@
         text-align: center;
     }
 
-    /* Title & Text */
     .modal-title {
         font-size: 20px;
         font-weight: 700;
@@ -932,7 +988,6 @@
         margin-bottom: 20px;
     }
 
-    /* Input */
     .modal-input {
         width: 100%;
         padding: 10px 12px;
@@ -942,7 +997,6 @@
         margin-bottom: 18px;
     }
 
-    /* Actions */
     .modal-actions {
         display: flex;
         justify-content: flex-end;
@@ -977,7 +1031,6 @@
             background: #1e4fc3;
         }
 
-    /* Animation */
     @@keyframes fadeInScale {
         from
 
@@ -992,6 +1045,23 @@
     }
 
     }
+
+    /* =========================
+       RESPONSIVE FIXES
+    ========================= */
+    @@media (max-width: 768px) {
+        .order-header, .order-row
+
+    {
+        grid-template-columns: 1fr 2fr 0.8fr 0.8fr 0.5fr;
+    }
+
+    .test-charges {
+        grid-template-columns: 1fr;
+    }
+
+    }
 </style>
+
 
 

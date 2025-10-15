@@ -29,11 +29,11 @@
         </div>
     </main>
     <!-- Table Popup component goes here -->
-    @* <TableSelection IsOpen="@ShowTableSelection" 
+    <TableSelection IsOpen="@ShowTableSelection" 
                     IsOpenChanged="OnTableSelectionChanged"
                     OutletId="@outletId"
                     BillGenrate="BillGen"
-                    OnTableSelected="HandleTableSelected" /> *@
+                    OnTableSelected="HandleTableSelected" />
 
     <QuickActions IsOpen="@ShowQuickAction"
                   IsOpenChanged="OnActionPopupChanged"
@@ -116,19 +116,17 @@
 
     private void OnTableSelectionChanged(bool value) => ShowTableSelection = value; // NEW: Handle TableSelection close
     private void OnActionPopupChanged(bool value) => ShowQuickAction = value;
-    
 
-    private async Task HandleActionSelected(string action) // NEW: Handle action from QuickActions
+
+    private async Task HandleActionSelected(string action) 
     {
         Console.WriteLine($"Selected action: {action}");
         if (action == "Bill Generate")
         {
-            ShowTableSelection = true; // Open TableSelection for Bill Generate
+            ShowTableSelection = true;
         }
-        // Add more if-else for other actions if needed
+       
     }
-
-
 
     private async Task HandleTableSelected(PfbRmscMst selectedTable) // NEW: Handle selected table
     {
@@ -148,7 +146,7 @@
 
     private void ShowCoverModal()
     {
-        // Show cover modal logic
+        TableSelectionService.TriggerCoverPopup();
     }
 
     private void LoadTableData()

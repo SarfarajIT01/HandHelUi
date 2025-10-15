@@ -354,6 +354,7 @@
         TableSelectionService.RequestTableSelected += LoadTableData;
         TableSelectionService.RequestOrderTypeSelected += UpdateOrderType;
         TableSelectionService.RequestGuestPopup += HandleGuestPopup;
+        TableSelectionService.RequestCoverPopup += HandleCoverPopup;
 
     }
 
@@ -736,6 +737,12 @@
         StateHasChanged();
     }
 
+    private void HandleCoverPopup()
+    {
+        ShowCovorPopup = true;
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         CartState.RequestToggleCart -= HandleToggleCart;
@@ -743,6 +750,7 @@
         TableSelectionService.RequestTableSelected -= LoadTableData;
         TableSelectionService.RequestOrderTypeSelected -= UpdateOrderType;
         TableSelectionService.RequestGuestPopup -= HandleGuestPopup;
+        TableSelectionService.RequestCoverPopup -= HandleCoverPopup;
     }
 
     

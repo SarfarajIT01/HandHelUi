@@ -202,8 +202,10 @@
                         {
                             <input type="text" class="form-control form-control-sm w-50"
                                    @bind="Remark"
+                                   @bind:event="oninput"
                                    @onblur="() => IsEditingRemark = false"
                                    @onkeydown="HandleRemarkKeydown" />
+
                         }
                         else
                         {
