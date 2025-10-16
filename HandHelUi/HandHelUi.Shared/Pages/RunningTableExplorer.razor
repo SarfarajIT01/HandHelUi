@@ -1,4 +1,8 @@
-﻿@page "/tables"
+﻿@page "/RunningTableExplorer"
+@using HandHelUi.Shared.Models
+@inject HttpClient Http
+@inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="table-container">
     <!-- Tabs -->
@@ -8,116 +12,186 @@
         <button class="@GetTabClass("All")" @onclick='() => SelectTab("All")'>All</button>
     </div>
 
-    <!-- Table Data -->
-    <div class="responsive-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>Table</th>
-                    @if (SelectedTab == "Occupied")
-                    {
-                        <th>Order No</th>
-                        @* <th>Status</th> *@
-                        <th>Steward</th>
-                        <th>Time</th>
-                        <th>Cover</th>
-                        <th>Qty</th>
-                        <th>Rate</th>
-                        <th>Name</th>
-                        <th>Amount</th>
-                    }
-                    else if (SelectedTab == "All")
-                    {
-                        <th>Order No</th>
-                        <th>Status</th>
-                        <th>Steward</th>
-                        <th>Time</th>
-                        <th>Cover</th>
-                        <th>Qty</th>
-                        <th>Rate</th>
-                        <th>Name</th>
-                        <th>Amount</th>
-                    }
-                    else
-                    {
-                        <th>Status</th>
-                    }
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var table in FilteredTables)
-                {
-                    <tr class="@GetRowClass(table)">
-                        <td>@table.TableNo</td>
-
+    <!-- Loading State -->
+    @if (IsLoading)
+    {
+        <div class="loading">Loading tables...</div>
+    }
+    else if (HasError)
+    {
+        <div class="error">Failed to load data. Please try again.</div>
+    }
+    else
+    {
+        <!-- Table Data -->
+        <div class="responsive-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Table</th>
                         @if (SelectedTab == "Occupied")
                         {
-                            <td>@table.OrderNo</td>
-                            @* <td>@table.Status</td> *@
-                            <td>@table.Steward</td>
-                            <td>@table.Time</td>
-                            <td>@table.Cover</td>
-                            <td>@table.Quantity</td>
-                            <td>@table.Rate.ToString("0.00")</td>
-                            <td>@table.ItemName</td>
-                            <td>@table.Amount.ToString("0.00")</td>
+                            <th>Outlet</th>
+                            <th>Pos</th>
+                            <th>Order No</th>
+                            <th>Steward</th>
+                            <th>Time</th>
+                            <th>Cover</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Name</th>
+                            <th>Amount</th>
                         }
                         else if (SelectedTab == "All")
                         {
-                            <td>@table.OrderNo</td>
-                            <td>@table.Status</td>
-                            <td>@table.Steward</td>
-                            <td>@table.Time</td>
-                            <td>@table.Cover</td>
-                            <td>@table.Quantity</td>
-                            <td>@table.Rate.ToString("0.00")</td>
-                            <td>@table.ItemName</td>
-                            <td>@table.Amount.ToString("0.00")</td>
+                            <th>Outlet</th>
+                            <th>Pos</th>
+                            <th>Order No</th>
+                            <th>Status</th>
+                            <th>Steward</th>
+                            <th>Time</th>
+                            <th>Cover</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Name</th>
+                            <th>Amount</th>
                         }
                         else
                         {
-                            <td>@table.Status</td>
+                            <th>Status</th>
                         }
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                </thead>
+
+                <tbody>
+                    @foreach (var table in FilteredTables)
+                    {
+                        <tr class="@GetRowClass(table)">
+                            <td>@table.TableNo</td>
+
+                            @if (SelectedTab == "Occupied")
+                            {
+                                <td>@table.Outlet</td>
+                                <td>@table.PosNo</td>
+                                <td>@table.OrderNo</td>
+                                <td>@table.Steward</td>
+                                <td>@table.Time</td>
+                                <td>@table.Cover</td>
+                                <td>@table.Quantity</td>
+                                <td>@table.Rate</td>
+                                <td>@table.ItemName</td>
+                                <td>@table.Amount</td>
+                            }
+                            else if (SelectedTab == "All")
+                            {
+                                <td>@table.Outlet</td>
+                                <td>@table.PosNo</td>
+                                <td>@table.OrderNo</td>
+                                <td>@table.Status</td>
+                                <td>@table.Steward</td>
+                                <td>@table.Time</td>
+                                <td>@table.Cover</td>
+                                <td>@table.Quantity</td>
+                                <td>@table.Rate</td>
+                                <td>@table.ItemName</td>
+                                <td>@table.Amount</td>
+                            }
+                            else
+                            {
+                                <td>@table.Status</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
 @code {
     private string SelectedTab = "Occupied";
+    private bool IsLoading = true;
+    private bool HasError = false;
+    private string outletId = "";
 
-    private List<TableInfo> AllTables = new()
-    {
-        new TableInfo { TableNo="001", OrderNo="RG1152857", Status="A", Steward="032", Time="17:30", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="002", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="003", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="004", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="005", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="006", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="007", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="008", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="009", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="010", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="011", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="012", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="013", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="014", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="015", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="016", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        new TableInfo { TableNo="017", OrderNo="RG1152843", Status="A", Steward="006", Time="13:21", Cover=1, Quantity=1, Rate=285.71m, ItemName="CHICKEN PAKORAS", Amount=285.71m },
-        // Add more data...
-    };
+    private List<TableInfo> OccupiedTables = new();
+    private List<TableInfo> VacantTables = new();
+    private List<TableInfo> AllTables = new();
 
-    private IEnumerable<TableInfo> FilteredTables => SelectedTab switch
+    private IEnumerable<TableInfo> FilteredTables =>
+        SelectedTab switch
+        // {
+        //     "Occupied" => OccupiedTables,
+        //     "Vacant" => VacantTables,
+        // _ => OccupiedTables.Concat(VacantTables
+        //                    .Where(v => !OccupiedTables
+        //                    .Any(o => o.TableNo == v.TableNo)))
+        // };
+
+        {
+            "Occupied" => OccupiedTables,
+            "Vacant" => VacantTables,
+            _ => AllTables
+        };
+
+    protected override async Task OnInitializedAsync()
     {
-        "Occupied" => AllTables.Where(t => t.Status == "A" && !string.IsNullOrEmpty(t.OrderNo)),
-        "Vacant" => Enumerable.Range(1, 12)
-            .Select(i => new TableInfo { TableNo = i.ToString("000"), Status = "A" }),
-        _ => AllTables,
-    };
+        outletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+        await LoadTablesAsync();
+    }
+
+    private async Task LoadTablesAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            HasError = false;
+
+            var response = await Http.GetFromJsonAsync<AllTableExplorer>($"api/CSATSU_RMS_ALLTableExplorer/{outletId}");
+
+            if (response is not null)
+            {
+                // Occupied
+                OccupiedTables = response.Occupied?.Select(o => new TableInfo
+                {
+                    TableNo = o.RsumTbl,
+                    OrderNo = o.RkotNo,
+                    PosNo = o.RkotPop,
+                    Outlet = o.OutletId,
+                    Status = "A",
+                    Steward = o.RsumStw,
+                    Time = o.RsumTim,
+                    Cover = o.RsumCvr,
+                    Quantity = o.RkotQty,
+                    Rate = o.RkotRat,
+                    ItemName = o.ItemName,
+                    Amount = o.Amount
+                }).ToList() ?? new();
+
+                // Vacant
+                VacantTables = response.Vacant?.Select(v => new TableInfo
+                {
+                    TableNo = v.TableNo,
+                    Status = v.Status
+                }).ToList() ?? new();
+
+                // Merge for "All" without duplicates
+                AllTables = OccupiedTables
+                    .Concat(VacantTables
+                        .Where(v => !OccupiedTables.Any(o => o.TableNo == v.TableNo))) // exclude duplicates
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            Console.WriteLine(" Error loading table data: " + ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 
     private void SelectTab(string tab) => SelectedTab = tab;
 
@@ -125,26 +199,10 @@
         $"tab-btn {(SelectedTab == tab ? "active" : "")}";
 
     private string GetRowClass(TableInfo table) =>
-        table.Status switch
-        {
-            "A" => "status-active",
-            _ => "status-inactive"
-        };
+        table.Status == "A" ? "status-active" : "status-inactive";
 
-    public class TableInfo
-    {
-        public string TableNo { get; set; } = "";
-        public string? OrderNo { get; set; }
-        public string? Status { get; set; }
-        public string? Steward { get; set; }
-        public string? Time { get; set; }
-        public int Cover { get; set; }
-        public int Quantity { get; set; }
-        public decimal Rate { get; set; }
-        public string? ItemName { get; set; }
-        public decimal Amount { get; set; }
-    }
 }
+
 <style>
     .table-container {
         background: #ffffff;

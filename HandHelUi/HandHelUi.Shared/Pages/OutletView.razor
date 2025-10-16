@@ -142,7 +142,8 @@
 
     private void NavigateToMenu(string outletId)
     {
-        NavigationManager.NavigateTo($"/menu/{outletId}");
+        NavigationManager.NavigateTo($"/menu/{outletId}", forceLoad: true);
+        // StateHasChanged();
     }
 }
 
