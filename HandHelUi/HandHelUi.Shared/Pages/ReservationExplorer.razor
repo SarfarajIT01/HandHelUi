@@ -1,0 +1,358 @@
+﻿@page "/reservation-explorer"
+@using System.Globalization
+
+   <div class="table-container overflow-x-auto rounded-2xl border border-gray-200">
+
+    <div class="search-panel">
+        <div class="search-field">
+            <label class="search-label">
+                <i class="fa fa-calendar"></i> Date:
+            </label>
+            <InputDate @bind-Value="SelectedDate" class="input-date" />
+        </div>
+
+        <div class="search-field">
+            <label class="search-label">
+                <i class="fa fa-user"></i> Name:
+            </label>
+            <input type="text" class="input-text" placeholder="Search by name..." @bind="SearchName" />
+        </div>
+
+        <div class="search-field">
+            <label class="search-label">
+                <i class="fa fa-check-circle"></i> Status:
+            </label>
+            <select class="input-select" @bind="SelectedStatus">
+                <option value="">All</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Pending">Pending</option>
+            </select>
+        </div>
+
+        <Button class="go-btn" @onclick="SearchReservations">
+            <i class="fa fa-search"></i> Search
+        </Button>
+    </div>
+
+    <!-- 👇 Scrollable wrapper added here -->
+    <div class="responsive-table">
+        <table class="min-w-full text-sm">
+            <thead class="bg-blue-600 text-white text-center">
+                <tr>
+                    <th>Ref No</th>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>POS</th>
+                    <th>Cover</th>
+                    <th>Res By</th>
+                    <th>No. of Tables</th>
+                    <th>Phone</th>
+                    <th>Time</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Table</th>
+                    <th>Source</th>
+                    <th>Comment</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-800 text-center bg-white">
+                @foreach (var item in Reservations)
+                {
+                    <tr class="border-b hover:bg-blue-50 transition">
+                        <td>@item.RefNo</td>
+                        <td>@item.Name</td>
+                        <td>@item.Code</td>
+                        <td>@item.POS</td>
+                        <td>@item.Cover</td>
+                        <td>@item.ResBy</td>
+                        <td>@item.NoOfTable</td>
+                        <td>@item.Phone</td>
+                        <td>@item.Time</td>
+                        <td>@item.Date.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            <span class="status-badge @(item.Status == "Confirmed" ? "status-confirmed" : "status-pending")">
+                                @item.Status
+                            </span>
+                        </td>
+                        <td>@item.Table</td>
+                        <td>@item.Source</td>
+                        <td>@item.Comment</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+@code {
+    private DateTime SelectedDate = DateTime.Today;
+
+    private List<ReservationModel> Reservations = new()
+    {
+        new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
+        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
+         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
+        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
+         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
+        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
+         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
+        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
+         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
+        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
+         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
+        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
+    };
+
+    // private void SearchReservations()
+    // {
+    //     Dummy filter - in real app you'd query your API or DB
+    //     Reservations = Reservations.Where(r => r.Date == SelectedDate).ToList();
+    // }
+
+    private string SearchName = "";
+    private string SelectedStatus = "";
+
+    private void SearchReservations()
+    {
+        var query = Reservations.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(SearchName))
+            query = query.Where(r => r.Name.Contains(SearchName, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(SelectedStatus))
+            query = query.Where(r => r.Status == SelectedStatus);
+
+        if (SelectedDate != default)
+            query = query.Where(r => r.Date.Date == SelectedDate.Date);
+
+        Reservations = query.ToList();
+    }
+
+
+    public class ReservationModel
+    {
+        public string RefNo { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Code { get; set; } = "";
+        public string POS { get; set; } = "";
+        public int Cover { get; set; }
+        public string ResBy { get; set; } = "";
+        public int NoOfTable { get; set; }
+        public string Phone { get; set; } = "";
+        public string Time { get; set; } = "";
+        public DateTime Date { get; set; }
+        public string Status { get; set; } = "";
+        public string Table { get; set; } = "";
+        public string Source { get; set; } = "";
+        public string Comment { get; set; } = "";
+    }
+}
+<style>
+    /* ========================= */
+    /*   Main Reservation Layout  */
+    /* ========================= */
+    .reservation-container {
+        font-family: 'Segoe UI', sans-serif;
+        background: linear-gradient(to bottom right, #f9fafb, #eef2f7);
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    /* ========================= */
+    /*   Search Bar Section       */
+    /* ========================= */
+    .search-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .input-date {
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 14px;
+        outline: none;
+        transition: border 0.2s;
+    }
+
+    .input-date:focus {
+        border-color: #0078d7;
+        box-shadow: 0 0 0 3px rgba(0,120,215,0.2);
+    }
+
+    .go-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease-in-out;
+    }
+
+    .go-btn:hover {
+        background-color: #218838;
+    }
+
+    /* ========================= */
+    /*   Modern Search Panel UI  */
+    /* ========================= */
+    .search-panel {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .search-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .search-label {
+        font-weight: 600;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+    }
+
+    .input-date, .input-text, .input-select {
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s;
+        min-width: 150px;
+    }
+
+    .input-text {
+        width: 180px;
+    }
+
+    .input-select {
+        background-color: white;
+    }
+
+    .input-date:focus, .input-text:focus, .input-select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    }
+
+    /* ========================= */
+    /*        Table Section      */
+    /* ========================= */
+    .table-container {
+        background: #ffffff;
+        border-radius: 13px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        margin: 15px;
+        display: flex;
+        flex-direction: column;
+        height: calc(80vh - 25px);
+    }
+
+    /* Scrollable body area */
+    .responsive-table {
+        width: 100%;
+        overflow-y: auto; /* scroll only table body */
+        flex-grow: 1;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        min-width: 800px;
+    }
+
+    /* Sticky header like first style */
+    thead {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: #0048ff;
+        color: white;
+    }
+
+    th {
+        text-align: center;
+        padding: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    td {
+        text-align: center;
+        padding: 10px;
+        border-bottom: 1px solid #e5e7eb;
+        color: #333;
+    }
+
+    /* Alternate row colors */
+    tbody tr:nth-child(odd) {
+        background-color: #f9fafc;
+    }
+
+    tbody tr:nth-child(even) {
+        background-color: #ffffff;
+    }
+
+    /* Hover effect */
+    tbody tr:hover {
+        background-color: #eaf3ff;
+        transition: 0.2s;
+    }
+
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    .status-confirmed {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .status-pending {
+        background-color: #fef9c3;
+        color: #92400e;
+    }
+
+    /* Responsive tweaks */
+    @@media (max-width: 768px) {
+        table {
+            font-size: 13px;
+            min-width: 600px;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        th, td {
+            padding: 6px;
+        }
+    }
+</style>
+
+
+
+
+
