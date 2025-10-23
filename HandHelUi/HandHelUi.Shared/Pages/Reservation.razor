@@ -1,211 +1,8 @@
-﻿@* @page "/reservation"
-
-<div class="reservation-page">
-    <div class="reservation-header">
-        <h2>Reservation</h2>
-        <p>Book your table easily and manage guest reservations</p>
-    </div>
-
-    <div class="reservation-form">
-        <div class="form-section">
-            <button class="btn-primary">Add Guest</button>
-
-            <div class="form-row">
-                <input type="text" placeholder="+91 Mobile" />
-            </div>
-
-            <div class="form-row">
-                <input type="text" placeholder="Guest Name" />
-            </div>
-
-            <div class="form-row two-cols">
-                <input type="text" placeholder="Table No." />
-                <input type="text" placeholder="No. of Cov" />
-            </div>
-
-            <div class="form-row two-cols">
-                <input type="text" placeholder="No. of Tab" />
-                <input type="text" placeholder="Reserve B" />
-            </div>
-
-            <div class="form-row">
-                <label>Table Comment</label>
-                <textarea rows="3"></textarea>
-            </div>
-
-            <div class="form-row two-cols">
-                <input type="text" placeholder="Pos" />
-                <input type="text" placeholder="Status" />
-            </div>
-
-            <div class="form-row two-cols">
-                <input type="date" />
-                <input type="time" />
-            </div>
-        </div>
-
-        <div class="form-section">
-            <h3>Reservation Time</h3>
-            <div class="checkbox-row">
-                <label><input type="checkbox" /> Breakfast</label>
-                <label><input type="checkbox" /> Lunch</label>
-                <label><input type="checkbox" /> Dinner</label>
-            </div>
-
-            <div class="form-row">
-                <label>Arrival Comment</label>
-                <textarea rows="3" placeholder="Enter arrival details..."></textarea>
-            </div>
-
-            <div class="form-row">
-                <label>Bill Comment</label>
-                <textarea rows="3" placeholder="Enter bill comments..."></textarea>
-            </div>
-
-            <button class="btn-reserve">Reserve</button>
-        </div>
-    </div>
-</div>
-
-<style>
-    .reservation-page {
-        background: #f8fbff;
-        min-height: 100vh;
-        padding: 2rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        overflow: hidden;
-    }
-
-    .reservation-header {
-        text-align: center;
-        background: linear-gradient(90deg, #0078ff, #00b4d8);
-        color: white;
-        padding: 1.2rem 2rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        width: 100%;
-        max-width: 800px;
-        margin-bottom: 1.5rem;
-    }
-
-        .reservation-header h2 {
-            margin: 0;
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
-
-        .reservation-header p {
-            margin: 0.4rem 0 0;
-            opacity: 0.9;
-        }
-
-    .reservation-form {
-        background: white;
-        width: 100%;
-        max-width: 800px;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        padding: 2rem;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .form-section {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .form-row {
-        display: flex;
-        flex-direction: column;
-        gap: 0.3rem;
-    }
-
-    .two-cols {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.8rem;
-    }
-
-    input, textarea {
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        padding: 0.6rem 0.8rem;
-        font-size: 0.95rem;
-        outline: none;
-        transition: all 0.2s ease;
-    }
-
-        input:focus, textarea:focus {
-            border-color: #0078ff;
-            box-shadow: 0 0 4px rgba(0,120,255,0.3);
-        }
-
-    label {
-        font-size: 0.85rem;
-        color: #555;
-        font-weight: 600;
-    }
-
-    .checkbox-row {
-        display: flex;
-        gap: 1.5rem;
-        font-weight: 500;
-    }
-
-    .btn-primary {
-        background: #6a00ff;
-        color: white;
-        border: none;
-        padding: 0.7rem 1.2rem;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        align-self: flex-start;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-        transition: 0.2s;
-    }
-
-        .btn-primary:hover {
-            background: #5500cc;
-        }
-
-    .btn-reserve {
-        background: linear-gradient(90deg, #0078ff, #00c46a);
-        color: white;
-        border: none;
-        padding: 0.9rem 1.2rem;
-        border-radius: 10px;
-        font-weight: 700;
-        font-size: 1rem;
-        cursor: pointer;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        transition: 0.2s;
-    }
-
-        .btn-reserve:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-        }
-
-    @@media (max-width: 768px) {
-        .reservation-form
-
-    {
-        grid-template-columns: 1fr;
-        padding: 1.2rem;
-    }
-
-    }
-</style> *@
-
-
-
-@page "/reservation"
+﻿@page "/reservation"
+@using System.Net.Http.Json
+@using HandHelUi.Shared.Models
+@inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="reservation-wrapper">
     <header class="reservation-header">
@@ -215,64 +12,123 @@
 
     <main class="reservation-content">
         <div class="form-section">
-            <button class="btn-primary">ADD GUEST</button>
+            <button class="btn-primary" @onclick="AddNewGuest">ADD GUEST</button>
 
             <div class="form-row">
-                <input type="text" placeholder="+91 Mobile" />
+                <input type="text" placeholder="+91 Mobile" @bind="reservation.Phone" />
             </div>
 
             <div class="form-row">
-                <input type="text" placeholder="Guest Name" />
+                <input type="text" placeholder="Guest Name" @bind="reservation.Gname" />
             </div>
 
             <div class="form-row two-cols">
-                <input type="text" placeholder="Table No." />
-                <input type="text" placeholder="No. of Cov" />
+                <input type="text" placeholder="Table No." @bind="reservation.TblNo" />
+                <input type="text" placeholder="No. of Cov" @bind="reservation.Covers" />
             </div>
 
             <div class="form-row two-cols">
-                <input type="text" placeholder="No. of Tab" />
-                <input type="text" placeholder="Reserve B" />
+                <input type="text" placeholder="No. of Tab" @bind="reservation.NoofTable" />
+                <input type="text" placeholder="Reserve By" @bind="reservation.ResBy" />
             </div>
 
             <div class="form-row">
                 <label>Table Comment</label>
-                <textarea rows="3"></textarea>
+                <textarea rows="3" @bind="reservation.TabComment"></textarea>
             </div>
 
             <div class="form-row two-cols">
-                <input type="text" placeholder="Pos" />
-                <input type="text" placeholder="Status" />
+                <input type="text" placeholder="Pos" @bind="reservation.Pos" />
+                <input type="text" placeholder="Status" @bind="reservation.FinalSts" />
             </div>
 
             <div class="form-row two-cols">
-                <input type="date" />
-                <input type="time" />
+                <input type="date" @bind="bookingDate" />
+                <input type="time" @bind="bookingTime" />
             </div>
         </div>
 
         <div class="form-section">
             <h3>Reservation Time</h3>
             <div class="checkbox-row">
-                <label><input type="checkbox" /> Breakfast</label>
-                <label><input type="checkbox" /> Lunch</label>
-                <label><input type="checkbox" /> Dinner</label>
+                <label><input type="checkbox" @bind="isBreakfast" /> Breakfast</label>
+                <label><input type="checkbox" @bind="isLunch" /> Lunch</label>
+                <label><input type="checkbox" @bind="isDinner" /> Dinner</label>
             </div>
 
             <div class="form-row">
                 <label>Arrival Comment</label>
-                <textarea rows="3" placeholder="Enter arrival details..."></textarea>
+                <textarea rows="3" placeholder="Enter arrival details..." @bind="reservation.ArrComment"></textarea>
             </div>
 
             <div class="form-row">
                 <label>Bill Comment</label>
-                <textarea rows="3" placeholder="Enter bill comments..."></textarea>
+                <textarea rows="3" placeholder="Enter bill comments..." @bind="reservation.BillComment"></textarea>
             </div>
 
-            <button class="btn-reserve">RESERVE</button>
+            <button class="btn-reserve" @onclick="ReserveTable">RESERVE</button>
         </div>
     </main>
 </div>
+
+@code {
+    // Model object
+    PfbTableReserve reservation = new PfbTableReserve();
+
+    // Extra UI fields
+    DateTime? bookingDate;
+    TimeOnly? bookingTime;
+    bool isBreakfast, isLunch, isDinner;
+
+    // Reset form
+    private void AddNewGuest()
+    {
+        reservation = new PfbTableReserve();
+        bookingDate = null;
+        bookingTime = null;
+        isBreakfast = isLunch = isDinner = false;
+    }
+
+    // Send data to API
+    private async Task ReserveTable()
+    {
+        try
+        {
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(reservation.Gname) || string.IsNullOrWhiteSpace(reservation.Phone))
+            {
+                await JS.InvokeVoidAsync("alert", "Please enter guest name and phone number.");
+                return;
+            }
+
+            // Prepare data for API
+            reservation.Bdate = bookingDate;
+            reservation.Btime = bookingTime?.ToString(@"hh\:mm");
+            reservation.Gcode = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+            reservation.SesId = GetSessionType();
+
+            // Post to API
+            var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_TABLE_RESERVE", reservation);
+            var result = await response.Content.ReadAsStringAsync();
+
+            await JS.InvokeVoidAsync("alert", result);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+    }
+
+    private string GetSessionType()
+    {
+        if (isBreakfast) return "Breakfast";
+        if (isLunch) return "Lunch";
+        if (isDinner) return "Dinner";
+        return "General";
+    }
+}
+
+
 <style>
     /* ===== Full Page Wrapper ===== */
     .reservation-wrapper {

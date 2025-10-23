@@ -1,7 +1,9 @@
 ﻿@page "/reservation-explorer"
+@inject HttpClient Http
 @using System.Globalization
+@using HandHelUi.Shared.Models
 
-   <div class="table-container overflow-x-auto rounded-2xl border border-gray-200">
+<div class="table-container overflow-x-auto rounded-2xl border border-gray-200">
 
     <div class="search-panel">
         <div class="search-field">
@@ -34,7 +36,6 @@
         </Button>
     </div>
 
-    <!-- 👇 Scrollable wrapper added here -->
     <div class="responsive-table">
         <table class="min-w-full text-sm">
             <thead class="bg-blue-600 text-white text-center">
@@ -59,24 +60,26 @@
                 @foreach (var item in Reservations)
                 {
                     <tr class="border-b hover:bg-blue-50 transition">
-                        <td>@item.RefNo</td>
-                        <td>@item.Name</td>
-                        <td>@item.Code</td>
-                        <td>@item.POS</td>
-                        <td>@item.Cover</td>
+                        <td>@item.ResRefNo</td>
+                        <td>@item.Gname</td>
+                        <td>@item.Gcode</td>
+                        <td>@item.Pos</td>
+                        <td>@item.Covers</td>
                         <td>@item.ResBy</td>
-                        <td>@item.NoOfTable</td>
+                        <td>@item.NoofTable</td>
                         <td>@item.Phone</td>
-                        <td>@item.Time</td>
-                        <td>@item.Date.ToString("dd/MM/yyyy")</td>
+                        <td>@item.Btime</td>
+                        <td>@item.Bdate?.ToString("dd/MM/yyyy")</td>
+
                         <td>
-                            <span class="status-badge @(item.Status == "Confirmed" ? "status-confirmed" : "status-pending")">
-                                @item.Status
+                            <span class="status-badge @(item.FinalSts == "A" ? "status-confirmed" : "status-pending")">
+                                @item.FinalSts
                             </span>
                         </td>
-                        <td>@item.Table</td>
-                        <td>@item.Source</td>
-                        <td>@item.Comment</td>
+
+                        <td>@item.TblNo</td>
+                        <td>@item.GstSource</td>
+                        <td>@item.TabComment</td>
                     </tr>
                 }
             </tbody>
@@ -84,70 +87,79 @@
     </div>
 </div>
 
-
 @code {
     private DateTime SelectedDate = DateTime.Today;
-
-    private List<ReservationModel> Reservations = new()
-    {
-        new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
-        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
-         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
-        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
-         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
-        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
-         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
-        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
-         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
-        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
-         new ReservationModel { RefNo = "R001", Name = "John Smith", Code = "JS01", POS = "POS1", Cover = 4, ResBy = "Admin", NoOfTable = 2, Phone = "9876543210", Time = "7:30 PM", Date = DateTime.Today, Status = "Confirmed", Table = "T1, T2", Source = "Online", Comment = "Birthday party" },
-        new ReservationModel { RefNo = "R002", Name = "Emily Clark", Code = "EC12", POS = "POS2", Cover = 2, ResBy = "Reception", NoOfTable = 1, Phone = "9123456789", Time = "8:00 PM", Date = DateTime.Today, Status = "Pending", Table = "T3", Source = "Call", Comment = "VIP Guest" },
-    };
-
-    // private void SearchReservations()
-    // {
-    //     Dummy filter - in real app you'd query your API or DB
-    //     Reservations = Reservations.Where(r => r.Date == SelectedDate).ToList();
-    // }
-
     private string SearchName = "";
     private string SelectedStatus = "";
 
+    private List<PfbTableReserve> Reservations = new();
+    private List<PfbTableReserve> AllReservations = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReservations();
+    }
+
+    private async Task LoadReservations()
+    {
+        try
+        {
+            AllReservations = await Http.GetFromJsonAsync<List<PfbTableReserve>>("api/CSATSU_RMS_TABLE_RESERVE");
+            Reservations = AllReservations;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
     private void SearchReservations()
     {
-        var query = Reservations.AsQueryable();
+        var query = AllReservations.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(SearchName))
-            query = query.Where(r => r.Name.Contains(SearchName, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(r => r.Gname!.Contains(SearchName, StringComparison.OrdinalIgnoreCase));
 
         if (!string.IsNullOrWhiteSpace(SelectedStatus))
-            query = query.Where(r => r.Status == SelectedStatus);
+            query = query.Where(r => r.FinalSts == SelectedStatus);
 
         if (SelectedDate != default)
-            query = query.Where(r => r.Date.Date == SelectedDate.Date);
+            query = query.Where(r => r.Bdate!.Value.Date == SelectedDate.Date);
 
         Reservations = query.ToList();
     }
 
-
-    public class ReservationModel
-    {
-        public string RefNo { get; set; } = "";
-        public string Name { get; set; } = "";
-        public string Code { get; set; } = "";
-        public string POS { get; set; } = "";
-        public int Cover { get; set; }
-        public string ResBy { get; set; } = "";
-        public int NoOfTable { get; set; }
-        public string Phone { get; set; } = "";
-        public string Time { get; set; } = "";
-        public DateTime Date { get; set; }
-        public string Status { get; set; } = "";
-        public string Table { get; set; } = "";
-        public string Source { get; set; } = "";
-        public string Comment { get; set; } = "";
-    }
+    // public class ReservationModel
+    // {
+    //     public string? Pos { get; set; }
+    //     public DateTime? Bdate { get; set; }
+    //     public string? Btime { get; set; }
+    //     public DateTime? Rdate { get; set; }
+    //     public string? Rtime { get; set; }
+    //     public string? SesId { get; set; }
+    //     public string? Gcode { get; set; }
+    //     public string? Gname { get; set; }
+    //     public string? Phone { get; set; }
+    //     public string? Gcat { get; set; }
+    //     public int? Covers { get; set; }
+    //     public int? NoofTable { get; set; }
+    //     public string? ResId { get; set; }
+    //     public string? ResBy { get; set; }
+    //     public string? SpInst { get; set; }
+    //     public string? MsgGst { get; set; }
+    //     public string? ActCan { get; set; }
+    //     public string? FinalSts { get; set; }
+    //     public string? ArrTime { get; set; }
+    //     public string? CanReason { get; set; }
+    //     public string? TblNo { get; set; }
+    //     public string? TabComment { get; set; }
+    //     public string? GstSource { get; set; }
+    //     public string? ArrComment { get; set; }
+    //     public string? BillComment { get; set; }
+    //     public string? ResRefNo { get; set; }
+    // }
 }
+
 <style>
     /* ========================= */
     /*   Main Reservation Layout  */
