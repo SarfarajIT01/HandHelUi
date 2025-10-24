@@ -1,8 +1,12 @@
 ﻿@page "/reservation"
 @using System.Net.Http.Json
 @using HandHelUi.Shared.Models
+@using HandHelUi.Shared.Services
+@using HandHelUi.Shared.Pages.Components
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject TableSelectionService TableSelectionService
+
 
 <div class="reservation-wrapper">
     <header class="reservation-header">
@@ -71,6 +75,11 @@
     </main>
 </div>
 
+<!-- Guest Component -->
+<Guest IsOpen=@ShowGuestPopup
+       IsOpenChanged="@((val) => ShowGuestPopup = val)"
+       OnGuestSelected="SelectedGuest" />
+
 @code {
     // Model object
     PfbTableReserve reservation = new PfbTableReserve();
@@ -80,13 +89,29 @@
     TimeOnly? bookingTime;
     bool isBreakfast, isLunch, isDinner;
 
+    private bool ShowGuestPopup = false;
+
     // Reset form
     private void AddNewGuest()
     {
-        reservation = new PfbTableReserve();
-        bookingDate = null;
-        bookingTime = null;
-        isBreakfast = isLunch = isDinner = false;
+        // reservation = new PfbTableReserve();
+        // bookingDate = null;
+        // bookingTime = null;
+        // isBreakfast = isLunch = isDinner = false;
+        // Navigation.NavigateTo($"/menu/{OutletId}", forceLoad: true);
+
+        ShowGuestPopup = true;
+
+        TableSelectionService.TriggerGuestPopup();
+    }
+
+    private void SelectedGuest(PfbGuestDto guest)
+    {
+        reservation.Gname = guest.GName;
+        reservation.Phone = guest.Phone1;
+        reservation.Gcode = guest.GuestCode;
+
+        // ShowGuestPopup = true;
     }
 
     // Send data to API
@@ -112,6 +137,7 @@
             var result = await response.Content.ReadAsStringAsync();
 
             await JS.InvokeVoidAsync("alert", result);
+            Navigation.NavigateTo($"/menu/{OutletId}", forceLoad: true);
         }
         catch (Exception ex)
         {
