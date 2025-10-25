@@ -1,0 +1,256 @@
+﻿@page "/GuestArrival"
+@inject IJSRuntime JS
+
+@if (ShowGuestPopup)
+{
+    <div class="popup-overlay-guest" @onclick="ClosePopup">
+        <div class="popup-card-guest" @onclick:stopPropagation>
+            <header class="popup-header">
+                <h3>Guest Arrival</h3>
+                <button class="btn-close" @onclick="ClosePopup"></button>
+                @* <button class="close-btn" @onclick="ClosePopup">✕</button> *@
+            </header>
+
+            <div class="popup-body">
+
+                <div class="input-block">
+                    <label>Mobile</label>
+                    <input class="input-box"
+                           @bind="guest.Mobile"
+                           placeholder="+91 Mobile" />
+                </div>
+
+                <div class="input-block">
+                    <label>Guest Name</label>
+                    <input class="input-box"
+                           @bind="guest.GuestName"
+                           placeholder="Full Name" />
+                </div>
+
+                <div class="input-block">
+                    <label>Address</label>
+                    <textarea class="input-box"
+                              @bind="guest.Address"
+                              placeholder="Guest Address"></textarea>
+                </div>
+
+                <div class="input-block">
+                    <label>Table No.</label>
+                    <input class="input-box"
+                           @bind="guest.TableNo"
+                           placeholder="T-01" />
+                </div>
+
+                <div class="date-row">
+                    <div class="date-col">
+                        <label>Date</label>
+                        <input @bind="guestDate" type="date" class="input-box" />
+                    </div>
+
+                     <div class="date-col">
+                        <label>Time</label>
+                        <input @bind="guestTime" type="time" class="input-box" />
+                    </div> 
+                </div>
+            </div>
+
+            <footer class="popup-footer">
+                <button class="submit-btn" @onclick="SubmitGuest">SUBMIT</button>
+            </footer>
+        </div>
+    </div>
+}
+
+@code {
+
+    // Popup visibility
+    private bool ShowGuestPopup = false; // hide initially
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Show popup after first render to prevent blinking
+            ShowGuestPopup = true;
+            StateHasChanged(); // trigger re-render
+        }
+    }
+
+    // NEW dummy model
+    public class GuestArrival
+    {
+        public string Mobile { get; set; } = "";
+        public string GuestName { get; set; } = "";
+        public string Address { get; set; } = "";
+        public string TableNo { get; set; } = "";
+    }
+
+    // Dummy guest object
+    GuestArrival guest = new GuestArrival
+    {
+        Mobile = "9822001122",
+        GuestName = "Rohit Kapoor",
+        Address = "Connaught Place, Delhi",
+        TableNo = "T-21"
+    };
+
+    // Date & Time dummy
+    DateTime guestDate = DateTime.Today;
+    TimeOnly guestTime = new TimeOnly(19, 00, 00); // 7:00 PM
+
+    // Close button
+    private void ClosePopup()
+    {
+        ShowGuestPopup = false;
+    }
+
+
+
+    // Submit button
+    private async Task SubmitGuest()
+    {
+        await JS.InvokeVoidAsync("alert",
+            $"Guest Booked!\n" +
+            $"Name: {guest.GuestName}\n" +
+            $"Mobile: {guest.Mobile}\n" +
+            $"Table: {guest.TableNo}\n" +
+            $"Date: {guestDate:dd/MM/yyyy}\n" +
+            $"Time: {guestTime}"
+        );
+    }
+}
+
+<style>
+.popup-overlay-guest {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.25s ease;
+}
+
+.popup-card-guest {
+    width: 360px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.18);
+    padding: 20px;
+    animation: slideUp 0.25s ease;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.popup-header h3 {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.close-btn {
+    border: none;
+    background: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+}
+
+/* .popup-body {
+    margin-top: 14px;
+} */
+
+.input-block {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+label {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #444;
+}
+
+.input-box {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    outline: none;
+    font-size: 14px;
+    transition: 0.2s all;
+}
+
+        .input-box:focus {
+            /* border-color: #7b2bf9;
+            box-shadow: 0 0 0 2px rgba(111, 36, 255, 0.15); */
+            border-color: #0078ff;
+            box-shadow: 0 0 8px rgba(0,120,255,0.25);
+        }
+
+
+
+textarea {
+    height: 65px;
+    resize: none;
+}
+
+.date-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.date-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.popup-footer {
+    margin-top: 18px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    /* background: linear-gradient(90deg, #7b2bf9, #8f45ff); */
+        background: linear-gradient(90deg, #0078ff);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.submit-btn:hover {
+    opacity: .92;
+    transform: translateY(-1px);
+}
+
+@@keyframes slideUp {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+</style>

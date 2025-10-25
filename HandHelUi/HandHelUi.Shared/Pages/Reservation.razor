@@ -5,6 +5,7 @@
 @using HandHelUi.Shared.Pages.Components
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject TableSelectionService TableSelectionService
 
 
@@ -90,6 +91,7 @@
     bool isBreakfast, isLunch, isDinner;
 
     private bool ShowGuestPopup = false;
+    private string? OutletId { get; set; }
 
     // Reset form
     private void AddNewGuest()
@@ -117,6 +119,7 @@
     // Send data to API
     private async Task ReserveTable()
     {
+        OutletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
         try
         {
             // Validate required fields

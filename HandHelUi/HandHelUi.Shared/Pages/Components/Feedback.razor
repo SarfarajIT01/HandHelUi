@@ -1,0 +1,546 @@
+﻿@* @page "/Feedback"
+@inherits ComponentBase
+
+@if (ShowPopup)
+{
+    <div class="popup-overlay" @onclick="CloseOutside">
+        <div class="popup-card" @onclick:stopPropagation>
+            <div class="popup-header">
+                <h3>Feedback</h3>
+                <button class="close-btn" @onclick="ClosePopup">✕</button>
+            </div>
+
+            <div class="popup-body">
+
+                <div class="input-block">
+                    <input class="input-line" type="tel" placeholder="+91 Mobile" />
+                </div>
+
+                <div class="input-block">
+                    <input class="input-line" type="text" placeholder="Guest Name" />
+                </div>
+
+                <div class="input-block">
+                    <input class="input-line" type="email" placeholder="Email" />
+                </div>
+
+                <div class="date-row">
+                    <div class="date-col">
+                        <label>Birthday</label>
+                        <InputDate class="input-box" @bind-Value="Birthday" />
+                    </div>
+
+                    <div class="date-col">
+                        <label>Anniversary</label>
+                        <InputDate class="input-box" @bind-Value="Anniversary" />
+                    </div>
+                </div>
+
+                <label class="title-label">Gender</label>
+                <div class="radio-row">
+                    <label class="radio-pill">
+                        <input type="radio" name="gender" /> Male
+                    </label>
+                    <label class="radio-pill">
+                        <input type="radio" name="gender" /> Female
+                    </label>
+                </div>
+
+                <label class="title-label">Did captain/manager visit?</label>
+                <div class="radio-row">
+                    <label class="radio-pill">
+                        <input type="radio" name="visit" /> Yes
+                    </label>
+                    <label class="radio-pill">
+                        <input type="radio" name="visit" /> No
+                    </label>
+                </div>
+
+                <label class="title-label">We'd like to know you better</label>
+                <div class="rating-row">
+                    <button class="rating-btn">Bad</button>
+                    <button class="rating-btn">Average</button>
+                    <button class="rating-btn">Good</button>
+                    <button class="rating-btn">Very Good</button>
+                </div>
+
+                <label class="title-label">Comments</label>
+                <textarea class="textarea-box" placeholder="Enter your valuable comments..."></textarea>
+            </div>
+
+            <div class="popup-footer">
+                <button class="submit-btn">SUBMIT FEEDBACK</button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    public bool ShowPopup { get; set; } = true;
+    public DateTime? Birthday { get; set; }
+    public DateTime? Anniversary { get; set; }
+
+    void ClosePopup() => ShowPopup = false;
+    void CloseOutside() => ShowPopup = false;
+}
+<style>
+    .popup-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2500;
+        backdrop-filter: blur(4px);
+        animation: fadeIn .25s ease;
+    }
+
+    .popup-card {
+        width: 360px;
+        background: #ffeef4;
+        padding: 18px 20px;
+        border-radius: 16px;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+        animation: slideUp .25s ease;
+    }
+
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+        .popup-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+    .close-btn {
+        border: none;
+        background: none;
+        font-size: 22px;
+        cursor: pointer;
+    }
+
+    .input-line {
+        width: 100%;
+        border: none;
+        border-bottom: 1px solid #999;
+        background: transparent;
+        padding: 10px 4px;
+        font-size: 14px;
+        outline: none;
+    }
+
+        .input-line:focus {
+            border-color: #8e2eff;
+        }
+
+    .input-block {
+        margin: 8px 0;
+    }
+
+    .input-box {
+        border-radius: 12px;
+        padding: 9px;
+    }
+
+    .date-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .date-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .title-label {
+        margin: 10px 0 4px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #444;
+    }
+
+    .radio-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+    }
+
+    .radio-pill {
+        padding: 6px 12px;
+        border-radius: 20px;
+        border: 1px solid #ccc;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .rating-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .rating-btn {
+        border: none;
+        padding: 7px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        background: #fff;
+        border: 1px solid #ddd;
+        cursor: pointer;
+    }
+
+    .textarea-box {
+        width: 100%;
+        border-radius: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        height: 70px;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(90deg, #8e2eff, #b433ff);
+        color: #fff;
+        font-weight: 600;
+        letter-spacing: .5px;
+        cursor: pointer;
+    }
+
+    @@keyframes slideUp {
+        from
+
+    {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+    }
+</style> *@
+
+
+@page "/Feedback"
+@inject IJSRuntime JS
+
+@if (ShowFeedbackPopup)
+{
+    <div class="popup-overlay-guest" @onclick="ClosePopup">
+        <div class="popup-card-guest" @onclick:stopPropagation>
+            <header class="popup-header">
+                <h3>Feedback</h3>
+                <button class="btn-close" @onclick="ClosePopup"></button>
+            </header>
+
+            <div class="popup-body">
+
+                <div class="input-block">
+                    <label>Mobile</label>
+                    <input class="input-box" @bind="model.Mobile" placeholder="+91 Mobile" />
+                </div>
+
+                <div class="input-block">
+                    <label>Guest Name</label>
+                    <input class="input-box" @bind="model.GuestName" placeholder="Full Name" />
+                </div>
+
+                <div class="input-block">
+                    <label>Email</label>
+                    <input class="input-box" @bind="model.Email" placeholder="Email" />
+                </div>
+
+                <div class="date-row">
+                    <div class="date-col">
+                        <label>Birthday</label>
+                        <InputDate @bind-Value="model.Birthday" class="input-box" />
+                    </div>
+
+                    <div class="date-col">
+                        <label>Anniversary</label>
+                        <InputDate @bind-Value="model.Anniversary" class="input-box" />
+                    </div>
+                </div>
+
+                <div class="input-block">
+                    <label>Gender</label>
+                    <div class="radio-row">
+                        <label class="radio-pill">
+                            <input type="radio" name="gender" @bind="model.Gender" /> Male
+                        </label>
+                        <label class="radio-pill">
+                            <input type="radio" name="gender" @bind="model.Gender"  /> Female
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-block">
+                    <label>Captain/Manager visited?</label>
+                    <div class="radio-row">
+                        <label class="radio-pill">
+                            <input type="radio" name="visit" @bind="model.CaptainVisit" /> Yes
+                        </label>
+                        <label class="radio-pill">
+                            <input type="radio" name="visit" @bind="model.CaptainVisit"  /> No
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-block">
+                    <label>Experience Rating</label>
+                    <div class="rating-row">
+                        <button class="rating-btn">Bad</button>
+                        <button class="rating-btn">Average</button>
+                        <button class="rating-btn">Good</button>
+                        <button class="rating-btn">Very Good</button>
+                    </div>
+                </div>
+
+                <div class="input-block">
+                    <label>Comments</label>
+                    <textarea class="input-box textarea-box"
+                              @bind="model.Comments"
+                              placeholder="Your valuable feedback..."></textarea>
+                </div>
+
+            </div>
+
+            <footer class="popup-footer">
+                <button class="submit-btn" @onclick="SubmitFeedback">SUBMIT FEEDBACK</button>
+            </footer>
+
+        </div>
+    </div>
+}
+
+@code {
+
+    private bool ShowFeedbackPopup = true; // Visible
+
+    public class FeedbackModel
+    {
+        public string Mobile { get; set; }
+        public string GuestName { get; set; }
+        public string Email { get; set; }
+        public DateTime? Birthday { get; set; }
+        public DateTime? Anniversary { get; set; }
+        public string Gender { get; set; }
+        public string CaptainVisit { get; set; }
+        public string Comments { get; set; }
+    }
+
+    FeedbackModel model = new();
+
+    void ClosePopup() => ShowFeedbackPopup = false;
+
+    async Task SubmitFeedback()
+    {
+        await JS.InvokeVoidAsync("alert", $"Thanks {model.GuestName}!");
+    }
+}
+<style>
+
+
+/* ——— Same styles used in GuestArrival ——— */
+
+.popup-overlay-guest {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.25s ease;
+    padding: 10px; /* allows some space on small screens */
+    overflow-y: auto; /* scroll if popup is taller than viewport */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.popup-overlay-guest::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+}
+
+.popup-card-guest {
+    width: 360px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.18);
+    padding: 20px;
+    animation: slideUp 0.25s ease;
+    max-height: 90vh; /* limits popup height to viewport */
+    overflow-y: auto; /* scroll inside popup */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.popup-card-guest::-webkit-scrollbar {
+    display: none;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-close {
+    border: none;
+    background: none;
+    font-size: 26px;
+    cursor: pointer;
+}
+
+/* —— Inputs —— */
+
+.input-block {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+label {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #444;
+}
+
+.input-box {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    outline: none;
+    font-size: 14px;
+    transition: 0.2s all;
+}
+
+.input-box:focus {
+    border-color: #0078ff;
+    box-shadow: 0 0 8px rgba(0,120,255,0.25);
+}
+
+textarea {
+    resize: none;
+}
+
+/* —— Date Columns —— */
+
+.date-row {
+    display: flex;
+    gap: 10px;
+}
+
+.date-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* —— Radio Pills —— */
+
+.radio-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.radio-pill {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 30px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* —— Experience Rating —— */
+
+.rating-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rating-btn {
+    border: none;
+    padding: 7px 12px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* —— Footer Submit —— */
+
+.popup-footer {
+    margin-top: 18px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(90deg, #0078ff, #0098ff);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.submit-btn:hover {
+    opacity: .92;
+    transform: translateY(-1px);
+}
+
+/* Animations */
+
+@@keyframes slideUp {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+</style>
