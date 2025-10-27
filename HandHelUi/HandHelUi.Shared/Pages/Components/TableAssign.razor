@@ -1,7 +1,7 @@
 ﻿@page "/TableAssign"
 @inject IJSRuntime JS
 
-@if (ShowGuestPopup)
+@if (Show)
 {
     <div class="popup-overlay-guest" @onclick="ClosePopup">
         <div class="popup-card-guest" @onclick:stopPropagation>
@@ -44,19 +44,11 @@
 
 @code {
 
-    // Popup visibility
-    private bool ShowGuestPopup = false; // hide initially
+    // Parent-controlled popup
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public EventCallback<bool> ShowChanged { get; set; }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Show popup after first render to prevent blinking
-            ShowGuestPopup = true;
-            StateHasChanged(); // trigger re-render
-        }
-    }
-
+ 
     // NEW dummy model
     public class GuestArrival
     {
@@ -80,12 +72,10 @@
     TimeOnly guestTime = new TimeOnly(19, 00, 00); // 7:00 PM
 
     // Close button
-    private void ClosePopup()
+    private async Task ClosePopup()
     {
-        ShowGuestPopup = false;
+        await ShowChanged.InvokeAsync(false);
     }
-
-
 
     // Submit button
     private async Task SubmitGuest()

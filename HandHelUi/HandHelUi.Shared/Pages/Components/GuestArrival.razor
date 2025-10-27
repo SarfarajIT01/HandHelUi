@@ -1,14 +1,16 @@
-﻿@page "/GuestArrival"
+﻿@using HandHelUi.Shared.Models
+@using HandHelUi.Shared.Services
 @inject IJSRuntime JS
+@inject HttpClient Http
+@inject TableSelectionService TableSelectionService
 
-@if (ShowGuestPopup)
+@if (Show)
 {
     <div class="popup-overlay-guest" @onclick="ClosePopup">
         <div class="popup-card-guest" @onclick:stopPropagation>
             <header class="popup-header">
                 <h3>Guest Arrival</h3>
                 <button class="btn-close" @onclick="ClosePopup"></button>
-                @* <button class="close-btn" @onclick="ClosePopup">✕</button> *@
             </header>
 
             <div class="popup-body">
@@ -16,21 +18,22 @@
                 <div class="input-block">
                     <label>Mobile</label>
                     <input class="input-box"
-                           @bind="guest.Mobile"
+                           @bind="guest.Phone1"
+                           @oninput="CheckMobile"
                            placeholder="+91 Mobile" />
                 </div>
 
                 <div class="input-block">
                     <label>Guest Name</label>
                     <input class="input-box"
-                           @bind="guest.GuestName"
+                           @bind="guest.GName"
                            placeholder="Full Name" />
                 </div>
 
                 <div class="input-block">
                     <label>Address</label>
                     <textarea class="input-box"
-                              @bind="guest.Address"
+                              @bind="guest.Add1"
                               placeholder="Guest Address"></textarea>
                 </div>
 
@@ -38,6 +41,7 @@
                     <label>Table No.</label>
                     <input class="input-box"
                            @bind="guest.TableNo"
+                           @onclick = "SelectTable"
                            placeholder="T-01" />
                 </div>
 
@@ -47,10 +51,10 @@
                         <input @bind="guestDate" type="date" class="input-box" />
                     </div>
 
-                     <div class="date-col">
+                    <div class="date-col">
                         <label>Time</label>
                         <input @bind="guestTime" type="time" class="input-box" />
-                    </div> 
+                    </div>
                 </div>
             </div>
 
@@ -61,64 +65,139 @@
     </div>
 }
 
+<!-- Table Component -->
+<TableSelection IsOpen="@ShowTablePopup"
+                IsOpenChanged="OnTablePopupChanged"
+                OnTableSelected="HandleTableSelected"
+                OutletId="@OutletId" />
+
 @code {
 
-    // Popup visibility
-    private bool ShowGuestPopup = false; // hide initially
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public EventCallback<bool> ShowChanged { get; set; }
+    private string OutletId = "";
+
+    private bool ShowTablePopup = false;
+
+    PfbGuestDto guest = new();
+    DateTime guestDate = DateTime.Today;
+    TimeOnly guestTime = new(19, 00);
+
+    private bool _initialized;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_initialized)
         {
-            // Show popup after first render to prevent blinking
-            ShowGuestPopup = true;
-            StateHasChanged(); // trigger re-render
+            OutletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+            _initialized = true;
+
+            StateHasChanged();
         }
     }
 
-    // NEW dummy model
-    public class GuestArrival
+    private void SelectTable()
     {
-        public string Mobile { get; set; } = "";
-        public string GuestName { get; set; } = "";
-        public string Address { get; set; } = "";
-        public string TableNo { get; set; } = "";
+        Show = false;
+        ShowTablePopup = true;
     }
 
-    // Dummy guest object
-    GuestArrival guest = new GuestArrival
+    private void HandleTableSelected(PfbRmscMst selectedTable)
     {
-        Mobile = "9822001122",
-        GuestName = "Rohit Kapoor",
-        Address = "Connaught Place, Delhi",
-        TableNo = "T-21"
-    };
+        guest.TableNo = selectedTable.RmscCod;
+        ShowTablePopup = false;
+        Show = true;
+    }
 
-    // Date & Time dummy
-    DateTime guestDate = DateTime.Today;
-    TimeOnly guestTime = new TimeOnly(19, 00, 00); // 7:00 PM
-
-    // Close button
-    private void ClosePopup()
+    private void OnTablePopupChanged(bool value)
     {
-        ShowGuestPopup = false;
+        ShowTablePopup = value;
+        Show = true;
     }
 
 
+    private async Task ClosePopup()
+    {
+        await ShowChanged.InvokeAsync(false);
+    }
 
-    // Submit button
+    private async Task CheckMobile(ChangeEventArgs e)
+    {
+        var mobile = e.Value?.ToString();
+
+        if (!string.IsNullOrWhiteSpace(mobile) && mobile.Length >= 10)
+        {
+            await SearchGuestByMobile(mobile);
+        }
+    }
+
+    private async Task SearchGuestByMobile(string mobile)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/CSATSU_RMS_GUEST/by-mobile/{mobile}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<PfbGuestDto>>();
+
+                if (data?.Count > 0)
+                {
+                    guest.GName = data[0].GName ?? "";
+                    guest.Add1 = data[0].Add1 ?? "";
+                }
+            }
+            else
+            {
+                guest.GName = "";
+                guest.Add1 = "";
+                await JS.InvokeVoidAsync("alert", "Guest does not exist!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SubmitGuest(PfbGuestDto guest)
+    {
+        // await JS.InvokeVoidAsync("alert",
+        //     $"Guest Arrived!\n" +
+        //     $"Name: {guest.GName}\n" +
+        //     $"Mobile: {guest.Phone1}\n" +
+        //     $"Table: {guest.TableNo}\n" +
+        //     $"Date: {guestDate:dd/MM/yyyy}\n" +
+        //     $"Time: {guestTime}"
+        // );
+
+        // await ShowChanged.InvokeAsync(false);
+        var response = await Http.GetAsync($"api/CSATSU_RMS_GUEST,{guest}");
+    }
+
     private async Task SubmitGuest()
     {
-        await JS.InvokeVoidAsync("alert",
-            $"Guest Booked!\n" +
-            $"Name: {guest.GuestName}\n" +
-            $"Mobile: {guest.Mobile}\n" +
-            $"Table: {guest.TableNo}\n" +
-            $"Date: {guestDate:dd/MM/yyyy}\n" +
-            $"Time: {guestTime}"
-        );
+        // guest.ArrivalDate = guestDate;
+        // guest.ArrivalTime = guestTime;
+
+        var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_GUEST", guest);
+
+        if (response.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("alert", "Guest added successfully!");
+            await ShowChanged.InvokeAsync(false);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to add guest!");
+        }
     }
+
 }
+
+
 
 <style>
 .popup-overlay-guest {
