@@ -76,6 +76,7 @@
     [Parameter] public bool Show { get; set; }
     [Parameter] public EventCallback<bool> ShowChanged { get; set; }
     private string OutletId = "";
+    private string posCode  = "";
 
     private bool ShowTablePopup = false;
 
@@ -90,6 +91,7 @@
         if (firstRender && !_initialized)
         {
             OutletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode"); 
             _initialized = true;
 
             StateHasChanged();
@@ -162,42 +164,106 @@
         StateHasChanged();
     }
 
-    private async Task SubmitGuest(PfbGuestDto guest)
-    {
-        // await JS.InvokeVoidAsync("alert",
-        //     $"Guest Arrived!\n" +
-        //     $"Name: {guest.GName}\n" +
-        //     $"Mobile: {guest.Phone1}\n" +
-        //     $"Table: {guest.TableNo}\n" +
-        //     $"Date: {guestDate:dd/MM/yyyy}\n" +
-        //     $"Time: {guestTime}"
-        // );
-
-        // await ShowChanged.InvokeAsync(false);
-        var response = await Http.GetAsync($"api/CSATSU_RMS_GUEST,{guest}");
-    }
-
     private async Task SubmitGuest()
     {
-        // guest.ArrivalDate = guestDate;
-        // guest.ArrivalTime = guestTime;
-
-        var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_GUEST", guest);
-
-        if (response.IsSuccessStatusCode)
+        try
         {
-            await JS.InvokeVoidAsync("alert", "Guest added successfully!");
-            await ShowChanged.InvokeAsync(false);
+            // Create guest object
+            var newGuest = new PfbGuestDto
+            {
+                GName = guest.GName,
+                GuestCode = guest.Phone1, 
+                Phone1 = guest.Phone1,
+                Add1 = guest.Add1,
+                // Covers = guest.Covers,
+                TableNo = guest.TableNo,
+                // RDate = guestDate,
+                // RTime = guestTime
+            };
+
+            // Add guest to master first
+            var guestResponse = await Http.PostAsJsonAsync("api/CSATSU_RMS_GUEST", newGuest);
+
+            if (!guestResponse.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "Failed to add guest.");
+                return;
+            }
+
+            var guestResult = await guestResponse.Content.ReadAsStringAsync();
+            if (!guestResult.Contains("Sucessfully", StringComparison.OrdinalIgnoreCase))
+            {
+                await JS.InvokeVoidAsync("alert", "Guest not saved properly.");
+                return;
+            }
+
+            // Now call Guest Arrival API
+            var arrivalPayload = new
+            {
+                Pos = posCode,
+                RDate = guestDate.ToString("yyyy-MM-dd"),
+                RTime = guestTime.ToString("HH:mm"),
+                GName = guest.GName,
+                GCode = guest.Phone1,
+                Phone = guest.Phone1,
+                // Covers = guest.Covers,
+                Add1 = guest.Add1,
+                TblNo = guest.TableNo
+            };
+
+            var arrivalResponse = await Http.PostAsJsonAsync("api/CSATSU_RMS_GuestArrival", arrivalPayload);
+
+            if (arrivalResponse.IsSuccessStatusCode)
+            {
+                var resultText = await arrivalResponse.Content.ReadAsStringAsync();
+
+                if (resultText.Contains("Insert Sucessfully", StringComparison.OrdinalIgnoreCase))
+                {
+                    // await JS.InvokeVoidAsync("swal", new
+                    // {
+                    //     title = "Successful!",
+                    //     text = "Guest Arrived!",
+                    //     icon = "success",
+                    //     button = "Ok!"
+                    // });
+                    Show = false;
+                    StateHasChanged();
+                    await JS.InvokeVoidAsync("Swal.fire", new
+                    {
+                        title = "Successful!",
+                        text = "Guest Arrived!",
+                        icon = "success",
+                        confirmButtonText = "OK"
+                    });
+
+
+                    // Clear UI
+                    guest = new();
+                    guestDate = DateTime.Today;
+                    guestTime = new TimeOnly(19, 00);
+                    
+                    await ClosePopup();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("alert", resultText);
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Arrival API failed!");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("alert", "Failed to add guest!");
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
         }
     }
+
 
 }
 
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
 .popup-overlay-guest {

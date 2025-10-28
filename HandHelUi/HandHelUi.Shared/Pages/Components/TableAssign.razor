@@ -1,37 +1,32 @@
 ﻿@page "/TableAssign"
 @inject IJSRuntime JS
+@inject HttpClient Http
 
-@if (Show)
+@if (ShowTableAssign)
 {
     <div class="popup-overlay-guest" @onclick="ClosePopup">
         <div class="popup-card-guest" @onclick:stopPropagation>
             <header class="popup-header">
-                <h3>Guest Arrival</h3>
+                <h3>Table Assign</h3>
                 <button class="btn-close" @onclick="ClosePopup"></button>
-                @* <button class="close-btn" @onclick="ClosePopup">✕</button> *@
             </header>
-            <button class="assign-btn" @onclick="SubmitGuest">Assign Table</button>
-            <div class="popup-body">
 
+            <button class="assign-btn" @onclick="AssignTable">Assign Table</button>
+
+            <div class="popup-body">
                 <div class="input-block">
                     <label>Mobile</label>
-                    <input class="input-box"
-                           @bind="guest.Mobile"
-                           placeholder="+91 Mobile" />
+                    <input class="input-box" @bind="guest.Mobile" placeholder="+91 Mobile" />
                 </div>
 
                 <div class="input-block">
                     <label>Guest Name</label>
-                    <input class="input-box"
-                           @bind="guest.GuestName"
-                           placeholder="Full Name" />
+                    <input class="input-box" @bind="guest.GuestName" placeholder="Full Name" />
                 </div>
 
                 <div class="input-block">
                     <label>Table No.</label>
-                    <input class="input-box"
-                           @bind="guest.TableNo"
-                           placeholder="T-01" />
+                    <input class="input-box" @bind="guest.TableNo" placeholder="T-01" />
                 </div>
             </div>
 
@@ -42,14 +37,21 @@
     </div>
 }
 
-@code {
+@if (ShowGuestPopup)
+{
+    <!-- Guest Component -->
+    <Guest IsOpen=@ShowGuestPopup
+           IsOpenChanged="@((val) => ShowGuestPopup = val)"
+           
+           />
+}
 
-    // Parent-controlled popup
-    [Parameter] public bool Show { get; set; }
+@code {
+    [Parameter] public bool ShowTableAssign { get; set; } = true;
     [Parameter] public EventCallback<bool> ShowChanged { get; set; }
 
- 
-    // NEW dummy model
+    private bool ShowGuestPopup = false;
+
     public class GuestArrival
     {
         public string Mobile { get; set; } = "";
@@ -58,38 +60,111 @@
         public string TableNo { get; set; } = "";
     }
 
-    // Dummy guest object
-    GuestArrival guest = new GuestArrival
-    {
-        Mobile = "9822001122",
-        GuestName = "Rohit Kapoor",
-        Address = "Connaught Place, Delhi",
-        TableNo = "T-21"
-    };
+    GuestArrival guest = new();
+    // bool ShowGuestArrival = false;
 
-    // Date & Time dummy
-    DateTime guestDate = DateTime.Today;
-    TimeOnly guestTime = new TimeOnly(19, 00, 00); // 7:00 PM
-
-    // Close button
     private async Task ClosePopup()
     {
         await ShowChanged.InvokeAsync(false);
     }
 
-    // Submit button
+    private async Task AssignTable()
+    {
+        await JS.InvokeVoidAsync("sessionStorage.setItem", "ResGuest", "1");
+        var id1 = await JS.InvokeAsync<string>("sessionStorage.getItem", "guestactive");
+
+        if (string.IsNullOrEmpty(id1))
+        {
+            await LoadGuestArrivalData(); // guestarrapi() equivalent
+            ShowGuestPopup = true;
+            ShowTableAssign = false;
+            await JS.InvokeVoidAsync("sessionStorage.setItem", "guestactive", "");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("sessionStorage.setItem", "guestactive", "");
+            ShowGuestPopup = false;
+            ShowTableAssign = true;
+            await LoadTableDetails(id1); // addtbldetail(id1)
+        }
+    }
+
+    private async Task LoadGuestArrivalData()
+    {
+        try
+        {
+            string postype = await JS.InvokeAsync<string>("sessionStorage.getItem", "postype");
+            var response = await Http.GetAsync("api/home/arrivaldata");
+            if (!response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("Swal.fire", new 
+                { 
+                    title = "Server Error", 
+                    text = "API not working properly", 
+                    icon = "error" 
+                });
+                return;
+            }
+
+            var data = await response.Content.ReadFromJsonAsync<List<GuestArrival>>();
+            if (data != null && data.Any())
+            {
+                // Example: Display data in your UI (if needed)
+                Console.WriteLine($"Loaded {data.Count} guests");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("Swal.fire", new 
+            {
+                title = "Error", 
+                text = ex.Message, 
+                icon = "error" 
+            });
+        }
+    }
+
+    private async Task LoadTableDetails(string id)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/home/addtbldetail?id={id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<GuestArrival>>();
+                if (data?.Any() == true)
+                {
+                    var info = data.First();
+                    guest.Mobile = info.Mobile;
+                    guest.GuestName = info.GuestName;
+                    guest.TableNo = info.TableNo;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("Swal.fire", new { title = "Error", text = ex.Message, icon = "error" });
+        }
+    }
+
     private async Task SubmitGuest()
     {
-        await JS.InvokeVoidAsync("alert",
-            $"Guest Booked!\n" +
-            $"Name: {guest.GuestName}\n" +
-            $"Mobile: {guest.Mobile}\n" +
-            $"Table: {guest.TableNo}\n" +
-            $"Date: {guestDate:dd/MM/yyyy}\n" +
-            $"Time: {guestTime}"
-        );
+        await JS.InvokeVoidAsync("Swal.fire", new
+        {
+            title = "Guest Booked!",
+            text = $"Name: {guest.GuestName}\nMobile: {guest.Mobile}\nTable: {guest.TableNo}",
+            icon = "success",
+            confirmButtonText = "OK"
+        });
+    }
+
+    private void OnGuestArrivalClosed(bool value)
+    {
+        ShowGuestPopup = value;
+        ShowTableAssign = !value;
     }
 }
+
 
 <style>
     .popup-overlay-guest {
