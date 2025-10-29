@@ -1,4 +1,5 @@
 ﻿@page "/TableAssign"
+@using HandHelUi.Shared.Models
 @inject IJSRuntime JS
 @inject HttpClient Http
 
@@ -16,22 +17,22 @@
             <div class="popup-body">
                 <div class="input-block">
                     <label>Mobile</label>
-                    <input class="input-box" @bind="guest.Mobile" placeholder="+91 Mobile" />
+                    <input class="input-box" @bind="Guest.Phone1" placeholder="+91 Mobile" />
                 </div>
 
                 <div class="input-block">
                     <label>Guest Name</label>
-                    <input class="input-box" @bind="guest.GuestName" placeholder="Full Name" />
+                    <input class="input-box" @bind="Guest.GName" placeholder="Full Name" />
                 </div>
 
                 <div class="input-block">
                     <label>Table No.</label>
-                    <input class="input-box" @bind="guest.TableNo" placeholder="T-01" />
+                    <input class="input-box" @bind="Guest.TableNo" @onclick="SelectTable" placeholder="T-01" />
                 </div>
             </div>
 
             <footer class="popup-footer">
-                <button class="submit-btn" @onclick="SubmitGuest">SUBMIT</button>
+                <button class="submit-btn" @onclick="TableAssigned">SUBMIT</button>
             </footer>
         </div>
     </div>
@@ -40,17 +41,28 @@
 @if (ShowGuestPopup)
 {
     <!-- Guest Component -->
-    <Guest IsOpen=@ShowGuestPopup
-           IsOpenChanged="@((val) => ShowGuestPopup = val)"
-           
-           />
+    <Guest IsOpen="@ShowGuestPopup"
+           ArrivalGuest="@ArrivalGuest"
+           OnGuestSelected="SelectedGuest"
+           IsOpenChanged="@((val) => ShowGuestPopup = val)" />
 }
+
+<!-- Table Component -->
+<TableSelection IsOpen="@ShowTablePopup"
+                IsOpenChanged="OnTablePopupChanged"
+                OnTableSelected="HandleTableSelected"
+                OutletId="@OutletId" />
 
 @code {
     [Parameter] public bool ShowTableAssign { get; set; } = true;
     [Parameter] public EventCallback<bool> ShowChanged { get; set; }
 
     private bool ShowGuestPopup = false;
+    private bool ShowTablePopup = false;
+    private string? ArrivalGuest = "ArrivedGuest";
+    private string OutletId = "";
+    private string posCode = "";
+    private bool _initialized;
 
     public class GuestArrival
     {
@@ -60,8 +72,50 @@
         public string TableNo { get; set; } = "";
     }
 
-    GuestArrival guest = new();
+    PfbGuestDto Guest = new();
     // bool ShowGuestArrival = false;
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            OutletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+            posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode");
+            _initialized = true;
+
+            StateHasChanged();
+        }
+    }
+
+
+    private void SelectedGuest(PfbGuestDto guest)
+    {
+        Guest.GName = guest.GName;
+        Guest.Phone1 = guest.Phone1;
+        // reservation.Gcode = guest.GuestCode;
+
+        ShowTableAssign = true;
+    }
+
+    private void SelectTable()
+    {
+        ShowTableAssign = false;
+        ShowTablePopup = true;
+    }
+
+    private void OnTablePopupChanged(bool value)
+    {
+        ShowTablePopup = value;
+        ShowTableAssign = true;
+    }
+
+    private void HandleTableSelected(PfbRmscMst selectedTable)
+    {
+        Guest.TableNo = selectedTable.RmscCod;
+        ShowTablePopup = false;
+        ShowTableAssign = true;
+    }
 
     private async Task ClosePopup()
     {
@@ -75,7 +129,7 @@
 
         if (string.IsNullOrEmpty(id1))
         {
-            await LoadGuestArrivalData(); // guestarrapi() equivalent
+            // await LoadGuestArrivalData(); 
             ShowGuestPopup = true;
             ShowTableAssign = false;
             await JS.InvokeVoidAsync("sessionStorage.setItem", "guestactive", "");
@@ -106,7 +160,7 @@
                 return;
             }
 
-            var data = await response.Content.ReadFromJsonAsync<List<GuestArrival>>();
+            var data = await response.Content.ReadFromJsonAsync<List<PfbGuestDto>>();
             if (data != null && data.Any())
             {
                 // Example: Display data in your UI (if needed)
@@ -131,13 +185,13 @@
             var response = await Http.GetAsync($"api/home/addtbldetail?id={id}");
             if (response.IsSuccessStatusCode)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<GuestArrival>>();
+                var data = await response.Content.ReadFromJsonAsync<List<PfbGuestDto>>();
                 if (data?.Any() == true)
                 {
                     var info = data.First();
-                    guest.Mobile = info.Mobile;
-                    guest.GuestName = info.GuestName;
-                    guest.TableNo = info.TableNo;
+                    Guest.Phone1 = info.Phone1;
+                    Guest.GName = info.GName;
+                    Guest.TableNo = info.TableNo;
                 }
             }
         }
@@ -147,16 +201,75 @@
         }
     }
 
-    private async Task SubmitGuest()
+    private async Task TableAssigned()
     {
-        await JS.InvokeVoidAsync("Swal.fire", new
+        try
         {
-            title = "Guest Booked!",
-            text = $"Name: {guest.GuestName}\nMobile: {guest.Mobile}\nTable: {guest.TableNo}",
-            icon = "success",
-            confirmButtonText = "OK"
-        });
+            var reserData = new 
+            {
+                Pos = posCode,
+                RDate = DateTime.Now,
+                GName = Guest.GName,
+                GCode = Guest.Phone1,
+                Phone1 = Guest.Phone1,
+                TableNo = Guest.TableNo
+            };
+
+            var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_GuestArrival", reserData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+
+                if (result.Contains("Insert Sucessfully", StringComparison.OrdinalIgnoreCase))
+                {
+                    ShowTableAssign = false;
+                    StateHasChanged();
+                    await JS.InvokeVoidAsync("Swal.fire", new
+                    {
+                        title = "Successful!",
+                        text = "Table Assigned",
+                        icon = "success",
+                        button = "Ok!"
+                    });
+
+                    // clear UI
+                    Guest = new PfbGuestDto();
+                    await JS.InvokeVoidAsync("sessionStorage.removeItem", "activetable");
+                    // ShowTableAssign = false;
+                    await ClosePopup();
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("Swal.fire", new
+                    {
+                        title = "Error",
+                        text = result,
+                        icon = "error"
+                    });
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("Swal.fire", new
+                {
+                    title = "Server Error",
+                    text = "API not working properly",
+                    icon = "error"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("Swal.fire", new
+            {
+                title = "Exception",
+                text = ex.Message,
+                icon = "error"
+            });
+        }
     }
+
 
     private void OnGuestArrivalClosed(bool value)
     {

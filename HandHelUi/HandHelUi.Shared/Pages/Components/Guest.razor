@@ -104,8 +104,11 @@
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string? ArrivalGuest { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public EventCallback<PfbGuestDto?> OnGuestSelected { get; set; }
+
+
 
     private bool IsLoading { get; set; } = true;
     private bool IsAddMode { get; set; } = false;
@@ -125,7 +128,14 @@
         try
         {
             IsLoading = true;
-            Guests = await Http.GetFromJsonAsync<List<PfbGuestDto>>("api/CSATSU_RMS_GUEST");
+            if(ArrivalGuest == "ArrivedGuest")
+            {
+                 Guests = await Http.GetFromJsonAsync<List<PfbGuestDto>>("api/CSATSU_RMS_GUEST_Arrival");
+            }
+            else
+            {
+                Guests = await Http.GetFromJsonAsync<List<PfbGuestDto>>("api/CSATSU_RMS_GUEST");
+            }
         }
         catch (Exception ex)
         {
