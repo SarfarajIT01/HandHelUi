@@ -1,5 +1,7 @@
-﻿@page "/Feedback"
+﻿
+@page "/Feedback"
 @inject IJSRuntime JS
+@inject HttpClient Http
 
 @if (ShowFeedbackPopup)
 {
@@ -7,11 +9,43 @@
         <div class="popup-card-guest" @onclick:stopPropagation>
             <header class="popup-header">
                 <h3>Feedback</h3>
-                <button class="btn-close" @onclick="ClosePopup"></button>
+                <button class="btn-close" @onclick="ClosePopup">×</button>
             </header>
 
             <div class="popup-body">
 
+                <!-- 🔹 Dynamic Bill Dropdown -->
+                <div class="input-block">
+                    <label>Select Bill</label>
+                    <select class="input-box" @onchange="OnBillSelected">
+                        <option value="">-- Select Bill --</option>
+                        @if (Bills != null)
+                        {
+                            @foreach (var bill in Bills)
+                            {
+                                <option value="@bill.RbilNo">@bill.RbilNo</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="input-block">
+                    <label>Steward Name</label>
+                    <input class="input-box"
+                           @bind="model.StewardName"
+                           placeholder="Steward Name"
+                           readonly />
+                </div>
+
+                <div class="input-block">
+                    <label>Table No</label>
+                    <input class="input-box"
+                           @bind="model.TableNo"
+                           placeholder="Table No"
+                           readonly />
+                </div>
+
+                <!-- Existing Fields -->
                 <div class="input-block">
                     <label>Mobile</label>
                     <input class="input-box" @bind="model.Mobile" placeholder="+91 Mobile" />
@@ -46,7 +80,7 @@
                             <input type="radio" name="gender" @bind="model.Gender" /> Male
                         </label>
                         <label class="radio-pill">
-                            <input type="radio" name="gender" @bind="model.Gender"  /> Female
+                            <input type="radio" name="gender" @bind="model.Gender" /> Female
                         </label>
                     </div>
                 </div>
@@ -58,7 +92,7 @@
                             <input type="radio" name="visit" @bind="model.CaptainVisit" /> Yes
                         </label>
                         <label class="radio-pill">
-                            <input type="radio" name="visit" @bind="model.CaptainVisit"  /> No
+                            <input type="radio" name="visit" @bind="model.CaptainVisit" /> No
                         </label>
                     </div>
                 </div>
@@ -85,17 +119,94 @@
             <footer class="popup-footer">
                 <button class="submit-btn" @onclick="SubmitFeedback">SUBMIT FEEDBACK</button>
             </footer>
-
         </div>
     </div>
 }
 
 @code {
 
-    private bool ShowFeedbackPopup = true; // Visible
+    [Parameter] public bool ShowFeedbackPopup { get; set; } = true;
+    [Parameter] public EventCallback<bool> ShowChanged { get; set; }
+
+    private string OutletId = "";
+    private string posCode = "";
+    private bool _initialized;
+
+    // List of bills loaded from API
+    private List<BillModel>? Bills = new();
+
+    // Feedback model
+    private FeedbackModel model = new();
+
+    private bool _isInitialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isInitialized)
+        {
+            try
+            {
+                OutletId = await JS.InvokeAsync<string>("localStorage.getItem", "outletId");
+                posCode = await JS.InvokeAsync<string>("localStorage.getItem", "posCode");
+
+                if (!string.IsNullOrEmpty(posCode))
+                {
+                    Bills = await Http.GetFromJsonAsync<List<BillModel>>($"api/CSATSU_RMS_RBILL_SUM_BAK/{posCode}");
+                }
+
+                _isInitialized = true;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during OnAfterRenderAsync: {ex.Message}");
+            }
+        }
+    }
+
+
+    // When user selects a bill number
+    private void OnBillSelected(ChangeEventArgs e)
+    {
+        var selectedBillNo = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(selectedBillNo))
+        {
+            var selected = Bills.FirstOrDefault(b => b.RbilNo == selectedBillNo);
+            if (selected != null)
+            {
+                model.BillNo = selected.RbilNo;
+                model.StewardName = selected.RbilStw;
+                model.TableNo = selected.RbilTbl;
+            }
+        }
+        else
+        {
+            model.BillNo = null;
+            model.StewardName = null;
+            model.TableNo = null;
+        }
+    }
+
+    void ClosePopup() => ShowFeedbackPopup = false;
+
+    async Task SubmitFeedback()
+    {
+        await JS.InvokeVoidAsync("alert", $"Feedback submitted for Bill {model.BillNo}");
+    }
+
+    // Models
+    public class BillModel
+    {
+        public string? RbilNo { get; set; }
+        public string? RbilStw { get; set; }
+        public string? RbilTbl { get; set; }
+    }
 
     public class FeedbackModel
     {
+        public string BillNo { get; set; }
+        public string StewardName { get; set; }
+        public string TableNo { get; set; }
         public string Mobile { get; set; }
         public string GuestName { get; set; }
         public string Email { get; set; }
@@ -105,16 +216,8 @@
         public string CaptainVisit { get; set; }
         public string Comments { get; set; }
     }
-
-    FeedbackModel model = new();
-
-    void ClosePopup() => ShowFeedbackPopup = false;
-
-    async Task SubmitFeedback()
-    {
-        await JS.InvokeVoidAsync("alert", $"Thanks {model.GuestName}!");
-    }
 }
+
 <style>
 
 

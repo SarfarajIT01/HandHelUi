@@ -91,6 +91,10 @@
 <TableAssign ShowTableAssign="ShowTableAssingPopup"
               ShowChanged="@((bool value) => ShowTableAssingPopup = value)" />
 
+<!-- Feedback POPUP RENDER -->
+<Feedback ShowFeedbackPopup="ShowFeedbackPopup"
+          ShowChanged="@((bool value) => ShowFeedbackPopup = value)" />
+
 @code {
     [Parameter] public string RestaurantName { get; set; } = "Restaurant Name";
     [Parameter] public string IpAddress { get; set; } = "192.168.1.1";
@@ -103,6 +107,7 @@
     // POPUP FLAG
     private bool ShowGuestArrivalPopup = false;
     private bool ShowTableAssingPopup = false;
+    private bool ShowFeedbackPopup = false;
 
     // MENU LIST (same as your original + popup flag)
     public List<MenuItem> MenuItems { get; set; } = new()
@@ -119,7 +124,9 @@
             }
         },
 
-        new MenuItem { Text = "Feedback", Icon = "bi-chat-text", Link = "#" },
+        //  POPUP TRIGGER HERE
+        new MenuItem { Text = "Feedback", Icon = "bi-chat-text", IsFeedbackPopup = true },
+
         new MenuItem { Text = "Reservation", Icon = "bi-newspaper", Link = "../reservation" },
 
         //  POPUP TRIGGER HERE
@@ -189,6 +196,12 @@
             StateHasChanged();
             return;
         }
+        else if (item.IsFeedbackPopup)
+        {
+            ShowFeedbackPopup = true;
+            StateHasChanged();
+            return;
+        }
 
         if (item.IsDropdown)
         {
@@ -238,6 +251,7 @@
         public bool IsDropdown { get; set; }
         public bool IsGuestArrivalPopup { get; set; }
         public bool IsTableAssignPopup { get; set; }
+        public bool IsFeedbackPopup { get; set; }
         public bool HasStar { get; set; }
         public string? BadgeText { get; set; }
         public List<MenuItem>? SubMenu { get; set; }
