@@ -1,5 +1,6 @@
 ﻿
 @page "/Feedback"
+@using HandHelUi.Shared.Models
 @inject IJSRuntime JS
 @inject HttpClient Http
 
@@ -14,7 +15,7 @@
 
             <div class="popup-body">
 
-                <!-- 🔹 Dynamic Bill Dropdown -->
+                <!-- Dynamic Bill Dropdown -->
                 <div class="input-block">
                     <label>Select Bill</label>
                     <select class="input-box" @onchange="OnBillSelected">
@@ -32,7 +33,7 @@
                 <div class="input-block">
                     <label>Steward Name</label>
                     <input class="input-box"
-                           @bind="model.StewardName"
+                           @bind="model.Steward"
                            placeholder="Steward Name"
                            readonly />
                 </div>
@@ -40,7 +41,7 @@
                 <div class="input-block">
                     <label>Table No</label>
                     <input class="input-box"
-                           @bind="model.TableNo"
+                           @bind="model.TableName"
                            placeholder="Table No"
                            readonly />
                 </div>
@@ -48,12 +49,12 @@
                 <!-- Existing Fields -->
                 <div class="input-block">
                     <label>Mobile</label>
-                    <input class="input-box" @bind="model.Mobile" placeholder="+91 Mobile" />
+                    <input class="input-box" @bind="model.GCode" placeholder="+91 Mobile" />
                 </div>
 
                 <div class="input-block">
                     <label>Guest Name</label>
-                    <input class="input-box" @bind="model.GuestName" placeholder="Full Name" />
+                    <input class="input-box" @bind="model.GName" placeholder="Full Name" />
                 </div>
 
                 <div class="input-block">
@@ -64,7 +65,7 @@
                 <div class="date-row">
                     <div class="date-col">
                         <label>Birthday</label>
-                        <InputDate @bind-Value="model.Birthday" class="input-box" />
+                        <InputDate @bind-Value="model.Dob" class="input-box" />
                     </div>
 
                     <div class="date-col">
@@ -77,10 +78,10 @@
                     <label>Gender</label>
                     <div class="radio-row">
                         <label class="radio-pill">
-                            <input type="radio" name="gender" @bind="model.Gender" /> Male
+                            <input type="radio" name="gender" @bind="model.NewGender" /> Male
                         </label>
                         <label class="radio-pill">
-                            <input type="radio" name="gender" @bind="model.Gender" /> Female
+                            <input type="radio" name="gender" @bind="model.NewGender" /> Female
                         </label>
                     </div>
                 </div>
@@ -89,10 +90,10 @@
                     <label>Captain/Manager visited?</label>
                     <div class="radio-row">
                         <label class="radio-pill">
-                            <input type="radio" name="visit" @bind="model.CaptainVisit" /> Yes
+                            <input type="radio" name="visit" @bind="model.NewVisitor" /> Yes
                         </label>
                         <label class="radio-pill">
-                            <input type="radio" name="visit" @bind="model.CaptainVisit" /> No
+                            <input type="radio" name="visit" @bind="model.NewVisitor" /> No
                         </label>
                     </div>
                 </div>
@@ -100,17 +101,21 @@
                 <div class="input-block">
                     <label>Experience Rating</label>
                     <div class="rating-row">
-                        <button class="rating-btn">Bad</button>
-                        <button class="rating-btn">Average</button>
-                        <button class="rating-btn">Good</button>
-                        <button class="rating-btn">Very Good</button>
+                        @foreach (var rating in Ratings)
+                        {
+                            <button class="rating-btn @(model.FoodQuality == rating ? "active" : "")"
+                                    @onclick="() => SelectExperienceRating(rating)">
+                                @rating
+                            </button>
+                        }
                     </div>
                 </div>
+
 
                 <div class="input-block">
                     <label>Comments</label>
                     <textarea class="input-box textarea-box"
-                              @bind="model.Comments"
+                              @bind="model.GComment"
                               placeholder="Your valuable feedback..."></textarea>
                 </div>
 
@@ -136,9 +141,17 @@
     private List<BillModel>? Bills = new();
 
     // Feedback model
-    private FeedbackModel model = new();
+    private PfbGuestCommentDto model = new();
 
     private bool _isInitialized;
+
+    private List<string> Ratings = new() { "Bad", "Average", "Good", "Very Good" };
+
+    private void SelectExperienceRating(string rating)
+    {
+        model.FoodQuality = rating;
+    }
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -174,16 +187,16 @@
             var selected = Bills.FirstOrDefault(b => b.RbilNo == selectedBillNo);
             if (selected != null)
             {
-                model.BillNo = selected.RbilNo;
-                model.StewardName = selected.RbilStw;
-                model.TableNo = selected.RbilTbl;
+                model.GBill = selected.RbilNo;
+                model.Steward = selected.RbilStw;
+                model.TableName = selected.RbilTbl;
             }
         }
         else
         {
-            model.BillNo = null;
-            model.StewardName = null;
-            model.TableNo = null;
+            model.GBill = null;
+            model.Steward = null;
+            model.TableName = null;
         }
     }
 
@@ -191,8 +204,83 @@
 
     async Task SubmitFeedback()
     {
-        await JS.InvokeVoidAsync("alert", $"Feedback submitted for Bill {model.BillNo}");
+        try
+        {
+            // Create the feedback object to send to API
+            var feedbackRequest = new PfbGuestCommentDto
+            {
+                GCode = model.GCode,
+                GPosC = posCode,
+                Steward = model.Steward,
+                GName = model.GName,
+                Email = model.Email,
+                Anniversary = model.Anniversary,
+                Birthday = model.Birthday,
+                // DiningQuality = dining,
+                // FoodQuality = food,
+                // ServiceQuality = services,
+                // ReferenceBy = referenceBy,
+                GComment = model.GComment,
+                TableName = model.TableName,
+                GBill = model.GBill,
+                NewGender = model.NewGender,
+                NewVisitor = model.NewVisitor,
+                // DynamicRating = dynamicRatings
+            };
+
+            // Send to API
+            var response = await Http.PostAsJsonAsync("api/CSATSU_RMS_GUEST_COMMENT", feedbackRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+                if (result.Contains("Already Exist", StringComparison.OrdinalIgnoreCase))
+                {
+                    await JS.InvokeVoidAsync("swal", new
+                    {
+                        title = "Feedback already submitted.",
+                        icon = "warning",
+                        button = "Go Back"
+                    });
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("swal", new
+                    {
+                        title = "Thank You!",
+                        text = "Feedback Successfully Submitted.",
+                        icon = "success",
+                        button = "Go Back"
+                    });
+                }
+
+                // 🔹 Reset form
+                model = new PfbGuestCommentDto();
+                StateHasChanged();
+                ShowFeedbackPopup = false;
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("Swal.fire", new
+                {
+                    title = "Error",
+                    text = "Something went wrong while submitting feedback.",
+                    icon = "error"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            await JS.InvokeVoidAsync("swal", new
+            {
+                title = "Error",
+                text = "Unexpected error occurred.",
+                icon = "error"
+            });
+        }
     }
+
 
     // Models
     public class BillModel
@@ -202,20 +290,6 @@
         public string? RbilTbl { get; set; }
     }
 
-    public class FeedbackModel
-    {
-        public string BillNo { get; set; }
-        public string StewardName { get; set; }
-        public string TableNo { get; set; }
-        public string Mobile { get; set; }
-        public string GuestName { get; set; }
-        public string Email { get; set; }
-        public DateTime? Birthday { get; set; }
-        public DateTime? Anniversary { get; set; }
-        public string Gender { get; set; }
-        public string CaptainVisit { get; set; }
-        public string Comments { get; set; }
-    }
 }
 
 <style>
@@ -374,6 +448,13 @@ textarea {
     opacity: .92;
     transform: translateY(-1px);
 }
+
+    .rating-btn.active {
+        background-color: #007bff;
+        color: white;
+        font-weight: 600;
+    }
+
 
 /* Animations */
 
