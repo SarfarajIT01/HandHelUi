@@ -1,0 +1,469 @@
+﻿@page "/OrderModify1"
+@using Microsoft.AspNetCore.Components
+@inject IJSRuntime JS
+
+<div class="order-page">
+
+    <!-- Combined Header -->
+    <header class="order-header">
+        <div class="header-top">
+            <div class="header-left">
+                <h1>Modify Order</h1>
+                <p class="subtext">Make changes to your active order</p>
+            </div>
+            <button class="icon-btn" title="Close" @onclick="CloseOrder">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="header-info">
+            <div><span>Order No:</span> <strong>RG1162857</strong></div>
+            <div><span>Table:</span> <strong>004</strong></div>
+            <div><span>Steward:</span> <strong>—</strong></div>
+            <div><span>Cover:</span> <strong>1</strong></div>
+            <div><span>Order Type:</span> <span class="badge badge-guest">GUEST</span></div>
+        </div>
+    </header>
+
+    <!-- Items -->
+    <section class="order-section">
+        <div class="section-header">
+            <h2>Order Items <span class="item-count">2 items</span></h2>
+            
+            <button class="btn btn-outline" @onclick="AddNewItem">
+                <i class="fas fa-plus"></i> Add New Item
+            </button>
+        </div>
+
+        <div class="order-list">
+            @foreach (var item in OrderItems)
+            {
+                <div class="order-card">
+                    <div class="item-row">
+                        <div class="item-info">
+                            <h3>@item.Name</h3>
+                            <p class="price">₹@item.Price.ToString("0.00")</p>
+                        </div>
+                        <div class="item-meta">
+                            <span>Qty: @item.Qty</span>
+                            <span>@item.Remark</span>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn btn-edit" @onclick="() => ModifyItem(item.Name)">
+                                <i class="fas fa-pen"></i> Edit
+                            </button>
+                            <button class="btn btn-remove" @onclick="() => RemoveItem(item.Name)">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                   
+                </div>
+
+            }
+        </div>
+    </section>
+
+    <!-- Summary -->
+    <section class="order-section">
+        <div class="section-header">
+            <h2>Summary</h2>
+        </div>
+
+        <div class="summary-card">
+            <div class="row"><span>Subtotal:</span> <span>₹629.00</span></div>
+            <div class="row"><span>Tax (9.5%):</span> <span>₹59.76</span></div>
+            <div class="row"><span>Discount:</span> <span class="text-red">-₹0.00</span></div>
+            <div class="row total"><span>Total:</span> <strong>₹688.76</strong></div>
+        </div>
+    </section>
+
+    <!-- Remarks -->
+    <section class="order-section">
+        <div class="section-header">
+            <h2>Remarks</h2>
+        </div>
+        <div class="remarks-card">
+            <p><i class="fas fa-comment-dots"></i> Other Remark: Special instructions for preparation</p>
+        </div>
+    </section>
+
+    <!-- Actions -->
+    <footer class="order-actions">
+        
+        <button class="btn btn-success" @onclick="SaveChanges">
+            <i class="fas fa-save"></i> Save Changes
+        </button>
+        <button class="btn btn-danger" @onclick="CancelOrder">
+            <i class="fas fa-ban"></i> Cancel Order
+        </button>
+    </footer>
+
+</div>
+
+@code {
+    record OrderItem(string Name, decimal Price, int Qty, string Remark);
+
+    List<OrderItem> OrderItems = new()
+    {
+        new("CHICKEN PAKORAS", 286, 2, "Spice Level: Medium"),
+        new("FRIED FISH", 343, 1, "Style: Crispy")
+    };
+
+    private async Task CloseOrder() => await JS.InvokeVoidAsync("history.back");
+
+    private void ModifyItem(string item) => Console.WriteLine($"Modify {item}");
+    private void RemoveItem(string item) => Console.WriteLine($"Remove {item}");
+    private void AddNewItem() => Console.WriteLine("Add item");
+    private async Task SaveChanges() => await JS.InvokeVoidAsync("alert", "Changes saved!");
+    private async Task CancelOrder()
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "Cancel order?"))
+            await JS.InvokeVoidAsync("alert", "Order cancelled");
+    }
+}
+
+<style>
+    :root {
+        --accent: #3f51b5;
+        --accent-light: #5f6fe0;
+        --success: #27ae60;
+        --danger: #e74c3c;
+        --bg: #f6f7fb;
+        --text: #2c3e50;
+        --radius: 12px;
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+        background: var(--bg);
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: var(--text);
+    }
+
+    .order-page {
+        /* max-width: 860px; */
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    /* HEADER */
+    .order-header {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 20px 24px;
+        margin-bottom: 20px;
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        /* margin-bottom: 12px; */
+    }
+
+    .header-left h1 {
+        font-size: 24px;
+        margin: 0;
+    }
+
+    .subtext {
+        font-size: 13px;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+
+    .header-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px 24px;
+        font-size: 14px;
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+    }
+
+        .header-info span {
+            color: #6c757d;
+        }
+
+        .header-info strong {
+            color: var(--text);
+        }
+
+        .order-header h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+
+    .subtext {
+        font-size: 13px;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+
+    .icon-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #6c757d;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+        .icon-btn:hover {
+            color: var(--danger);
+            transform: scale(1.1);
+        }
+
+    /* INFO */
+    .order-info {
+        background: white;
+        border-radius: var(--radius);
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow);
+    }
+
+    .info-card {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        font-size: 14px;
+    }
+
+        .info-card span {
+            color: #6c757d;
+        }
+
+        .info-card strong {
+            color: var(--text);
+        }
+
+    .badge {
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 12px;
+        color: white;
+    }
+
+    .badge-guest {
+        background: var(--accent);
+    }
+
+    /* SECTIONS */
+    .order-section {
+        background: white;
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+        margin-bottom: 20px;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin: 0;
+        }
+
+    .item-count {
+        background: var(--accent);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+    }
+
+
+    /* ITEMS */
+    .order-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .order-card {
+        border: 1px solid #eee;
+        border-radius: var(--radius);
+        padding: 14px 16px;
+        transition: 0.25s;
+    }
+
+        .order-card:hover {
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+
+    .item-main {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .item-info h3 {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .price {
+        font-weight: 700;
+        color: var(--accent);
+    }
+
+    .item-meta {
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+
+    .item-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    /* BUTTONS */
+    .btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+        border: none;
+        transition: 0.3s;
+    }
+
+    .btn-edit {
+        background: var(--accent-light);
+        color: white;
+    }
+
+        .btn-edit:hover {
+            background: var(--accent);
+        }
+
+    .btn-remove {
+        background: var(--danger);
+        color: white;
+    }
+
+        .btn-remove:hover {
+            background: #c0392b;
+        }
+
+    /* SUMMARY */
+    .summary-card {
+        background: #f9fafc;
+        border-radius: var(--radius);
+        padding: 16px;
+    }
+
+        .summary-card .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+        }
+
+            .summary-card .row:last-child {
+                border: none;
+            }
+
+        .summary-card .total {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+            .summary-card .total strong {
+                color: var(--success);
+            }
+
+    .text-red {
+        color: var(--danger);
+    }
+
+    /* REMARKS */
+    .remarks-card {
+        background: #f9fafc;
+        border-radius: var(--radius);
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #555;
+    }
+
+    /* ACTION FOOTER */
+    .order-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .btn-outline {
+        background: white;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+    }
+
+        .btn-outline:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+    .btn-success {
+        background: var(--success);
+        color: white;
+    }
+
+        .btn-success:hover {
+            background: #219a52;
+        }
+
+    .btn-danger {
+        background: var(--danger);
+        color: white;
+    }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+    @@media (max-width: 768px) {
+        .order-page
+
+    {
+        padding: 12px;
+    }
+
+    .order-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    }
+</style>

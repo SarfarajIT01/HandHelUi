@@ -78,10 +78,10 @@
                     <label>Gender</label>
                     <div class="radio-row">
                         <label class="radio-pill">
-                            <input type="radio" name="gender" @bind="model.NewGender" /> Male
+                            <input type="radio" name="gender" value="M" checked="@(model.NewGender == "M")" @onchange="@((e) => model.NewGender = "M")" /> Male
                         </label>
                         <label class="radio-pill">
-                            <input type="radio" name="gender" @bind="model.NewGender" /> Female
+                            <input type="radio" name="gender" value="F" checked="@(model.NewGender == "F")" @onchange="@((e) => model.NewGender = "F")" /> Female
                         </label>
                     </div>
                 </div>
@@ -90,10 +90,10 @@
                     <label>Captain/Manager visited?</label>
                     <div class="radio-row">
                         <label class="radio-pill">
-                            <input type="radio" name="visit" @bind="model.NewVisitor" /> Yes
+                            <input type="radio" name="visit" value="Yes" checked="@(model.NewVisitor == "Yes")" @onchange="@((e) => model.NewVisitor = "Yes")" /> Yes
                         </label>
                         <label class="radio-pill">
-                            <input type="radio" name="visit" @bind="model.NewVisitor" /> No
+                            <input type="radio" name="visit" value="No" checked="@(model.NewVisitor == "No")" @onchange="@((e) => model.NewVisitor = "No")" /> No
                         </label>
                     </div>
                 </div>
@@ -200,7 +200,10 @@
         }
     }
 
-    void ClosePopup() => ShowFeedbackPopup = false;
+    private async Task ClosePopup()
+    {
+        await ShowChanged.InvokeAsync(false);
+    } 
 
     async Task SubmitFeedback()
     {
@@ -217,7 +220,7 @@
                 Anniversary = model.Anniversary,
                 Birthday = model.Birthday,
                 // DiningQuality = dining,
-                // FoodQuality = food,
+                FoodQuality = model.FoodQuality,
                 // ServiceQuality = services,
                 // ReferenceBy = referenceBy,
                 GComment = model.GComment,
@@ -233,10 +236,11 @@
 
             if (response.IsSuccessStatusCode)
             {
+                ShowFeedbackPopup = false;
                 var result = await response.Content.ReadAsStringAsync();
                 if (result.Contains("Already Exist", StringComparison.OrdinalIgnoreCase))
                 {
-                    await JS.InvokeVoidAsync("swal", new
+                    await JS.InvokeVoidAsync("Swal.fire", new
                     {
                         title = "Feedback already submitted.",
                         icon = "warning",
@@ -245,7 +249,7 @@
                 }
                 else
                 {
-                    await JS.InvokeVoidAsync("swal", new
+                    await JS.InvokeVoidAsync("Swal.fire", new
                     {
                         title = "Thank You!",
                         text = "Feedback Successfully Submitted.",
@@ -254,30 +258,34 @@
                     });
                 }
 
-                // 🔹 Reset form
+                // Reset form
                 model = new PfbGuestCommentDto();
                 StateHasChanged();
-                ShowFeedbackPopup = false;
+                await ClosePopup();
             }
             else
             {
+                ShowFeedbackPopup = false;
                 await JS.InvokeVoidAsync("Swal.fire", new
                 {
                     title = "Error",
                     text = "Something went wrong while submitting feedback.",
                     icon = "error"
                 });
+                await ClosePopup();
             }
         }
         catch (Exception ex)
         {
+            ShowFeedbackPopup = false;
             Console.WriteLine($"Error: {ex.Message}");
-            await JS.InvokeVoidAsync("swal", new
+            await JS.InvokeVoidAsync("Swal.fire", new
             {
                 title = "Error",
                 text = "Unexpected error occurred.",
                 icon = "error"
             });
+            await ClosePopup();
         }
     }
 
@@ -289,7 +297,6 @@
         public string? RbilStw { get; set; }
         public string? RbilTbl { get; set; }
     }
-
 }
 
 <style>
